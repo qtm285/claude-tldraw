@@ -146,3 +146,13 @@ Check `public/docs/{doc}/macros.json` exists. Rebuild if needed.
 | `src/MathNoteShape.tsx` | Custom TLDraw shape with KaTeX |
 | `src/useYjsSync.ts` | Real-time collaboration hook |
 | `src/synctexAnchor.ts` | Anchor storage and resolution |
+
+## Permissions
+
+These operations are pre-approved for autonomous work:
+
+- **Bash**: `npm run *`, `node`, shell scripts in this project, `curl` for local API testing, `open` for browser, process management (`pkill`, `lsof`)
+- **Edit/Write**: Any file in `/Users/skip/work/claude-tldraw/`
+- **Git**: All operations within this repo (commit, push, branch, etc.)
+
+**Restriction**: Git write operations (commit, push) in other repos require approval.
