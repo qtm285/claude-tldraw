@@ -8,7 +8,11 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 |------|---------|
 | Start dev server | `npm run dev` |
 | Start sync server | `npm run sync` |
+| Start collab session | `npm run collab` |
+| Start collab + watcher | `npm run collab -- --watch /path/to/main.tex doc-name` |
+| Watch for changes | `npm run watch -- /path/to/main.tex doc-name` |
 | Build paper | `./build-svg.sh /path/to/paper.tex doc-name "Title"` |
+| Publish snapshot | `npm run publish-snapshot -- doc-name` |
 | Migrate annotations | `node scripts/migrate-annotations.js <room> <doc>` |
 
 ## Adding a New Paper
@@ -74,9 +78,47 @@ node scripts/migrate-annotations.js <room-id> <doc-name>
 
 ## Collaboration
 
-### Local network
+### Collab session (recommended)
+
+Start everything in one command:
+
 ```bash
-# Start servers
+# All services (sync, dev, MCP)
+npm run collab
+
+# All services + auto-rebuild on .tex changes
+npm run collab -- --watch ~/papers/main.tex my-paper
+```
+
+Prints Tailscale/LAN URLs for collaborators. Viewers auto-detect the sync server from the hostname they're connecting to.
+
+### Auto-rebuild watcher
+
+Watch a .tex file and auto-rebuild + hot-reload viewers on change:
+
+```bash
+npm run watch -- /path/to/main.tex doc-name
+```
+
+The watcher:
+- Watches `.tex`, `.bib`, `.sty`, `.cls` files in the directory
+- Debounces changes (2s default, set `DEBOUNCE_MS` env var)
+- Runs `build-svg.sh` on change
+- Signals connected viewers to hot-reload via Yjs
+- Does an initial build on startup
+
+### Publishing snapshots
+
+Bake current annotations into a static snapshot and deploy to GitHub Pages:
+
+```bash
+npm run publish-snapshot -- doc-name
+```
+
+This exports annotations from the Yjs sync server, builds the static site, and deploys. The static viewer loads annotations read-only from `annotations.json` when no sync server is available.
+
+### Manual setup
+```bash
 npm run sync                    # Port 5176
 npm run dev                     # Port 5173
 
@@ -143,6 +185,9 @@ Check `public/docs/{doc}/macros.json` exists. Rebuild if needed.
 | `server/synctex-server.js` | Source ↔ PDF coordinate mapping |
 | `scripts/extract-preamble.js` | Parse LaTeX macros for KaTeX |
 | `scripts/migrate-annotations.js` | Reposition annotations after rebuild |
+| `scripts/watch.mjs` | Auto-rebuild on .tex changes + signal reload |
+| `scripts/collab.mjs` | Start all services for collaborative editing |
+| `scripts/publish-snapshot.mjs` | Export annotations + deploy to Pages |
 | `src/MathNoteShape.tsx` | Custom TLDraw shape with KaTeX |
 | `src/useYjsSync.ts` | Real-time collaboration hook |
 | `src/synctexAnchor.ts` | Anchor storage and resolution |
