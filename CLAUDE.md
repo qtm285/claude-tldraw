@@ -158,6 +158,57 @@ Syntax:
 
 Custom macros from the paper's preamble are automatically available (e.g., `$\E[X]$`, `$\chis$`).
 
+## iPad Review via MCP
+
+### Starting a session
+When the user asks to review a paper (e.g. "let's review this", "review bregman"):
+1. Figure out the doc name and tex file:
+   - If the user names a doc, check `public/docs/manifest.json` for its `texFile` path
+   - If contextual (user is in a paper directory), find the main `.tex` file there and use the directory name as doc name
+   - If the doc isn't built yet, run `./build-svg.sh /path/to/main.tex doc-name` first
+2. Check if services are already running (`lsof -i :5173`). If not, run `npm run collab` in background from the claude-tldraw directory.
+3. Print a QR code for the iPad:
+   ```
+   node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"
+   ```
+   Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN.
+4. Open the viewer locally: `open http://localhost:5173/?doc=DOC`
+5. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
+6. Enter the listen-respond loop with `wait_for_feedback(doc)`
+
+### Listening for feedback
+Call `wait_for_feedback(doc)` in a loop. It blocks until:
+- Ping (user tapped share) — immediate
+- Text selection — 2s debounce
+- Drawn shape (pen, highlight, arrow, geo) — 5s debounce
+- Annotation edit — 5s debounce
+
+### Reading annotations
+- `read_pen_annotations(doc)` — all drawn shapes with source line mapping
+- `list_annotations(doc)` — all math-note stickies
+
+### Responding
+- `add_annotation(doc, line, text)` — persistent note anchored to source line
+- `send_note(doc, line, text)` — quick note via WebSocket + Yjs
+- `reply_annotation(doc, id, text)` — append to existing note
+- `highlight_location(file, line)` — flash red circle at source line
+- `scroll_to_line(doc, line)` — scroll viewer to source line
+
+### Cleanup
+- `delete_annotation(doc, id)` — remove a note
+
+### Review loop behavior
+When the user says they're reviewing a document, enter a listen-respond loop:
+1. Call `wait_for_feedback(doc)` to block for the next annotation
+2. Interpret what came in (pen stroke, highlight, text selection, etc.)
+3. Scroll Zed to the relevant source line: `zed /path/to/file.tex:LINE`
+4. Respond — drop a note, reply, answer the question, edit tex, whatever's needed
+5. Call `wait_for_feedback(doc)` again automatically
+
+Always keep Zed in sync: whenever you're discussing, highlighting, or responding to a specific source line, scroll Zed there with `zed file.tex:LINE`. This is the default behavior, not something the user should have to ask for.
+
+If the user interrupts with a chat message, handle it, then resume `wait_for_feedback`. The default is to stay in the loop until the user says they're done.
+
 ## Troubleshooting
 
 ### "Document not found in manifest"
