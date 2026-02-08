@@ -171,6 +171,14 @@ This handles everything: builds SVGs if needed, starts services + watcher, build
 
 **Do NOT run `build-svg.sh`, `npm run collab`, `npm run dev`, `npm run sync`, or `npm run watch` individually.** `open.sh` handles all of it. Running them separately will duplicate services or conflict with what's already running.
 
+How it works under the hood:
+- **Services** (dev server, sync server) are shared — started once, used by all docs
+- **Watchers** are per-doc — each doc gets its own `watch.mjs` process that auto-rebuilds SVGs and the diff on tex changes
+- If services are already running (another agent/session), `open.sh` skips startup but still adds a watcher for the new doc
+- The initial SVG build is synchronous (must finish before you can view); the diff build runs in the background
+- The diff compares the current tex on disk against the last git commit (HEAD)
+- After the initial build, the watcher handles all subsequent rebuilds — don't re-run `build-svg.sh` or `build-diff.sh` manually
+
 For an **iPad review session** (not just viewing), also:
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
