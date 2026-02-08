@@ -209,6 +209,39 @@ Always keep Zed in sync: whenever you're discussing, highlighting, or responding
 
 If the user interrupts with a chat message, handle it, then resume `wait_for_feedback`. The default is to stay in the loop until the user says they're done.
 
+### Diff review workflow
+
+When starting a review of a diff document (`format: "diff"` in manifest):
+
+1. **Populate summaries at session start.** Read `diff-info.json` and git diff to write a one-line summary per changed page:
+   - Read `public/docs/{doc}/diff-info.json` to get page pairs and the git ref
+   - Run `git diff {ref} -- {texfile}` in the tex repo to get the actual hunks
+   - Map hunks to pages using the line ranges in diff-info
+   - Write summaries to Yjs `signal:diff-summaries` via a Node one-liner:
+     ```bash
+     node -e "
+     import WebSocket from 'ws'; import * as Y from 'yjs';
+     const doc = new Y.Doc(); const ws = new WebSocket('ws://localhost:5176/DOC');
+     ws.on('message', d => Y.applyUpdate(doc, new Uint8Array(d)));
+     setTimeout(() => {
+       const m = doc.getMap('records');
+       doc.transact(() => m.set('signal:diff-summaries', {
+         summaries: { PAGE: 'summary text', ... }, timestamp: Date.now()
+       }));
+       setTimeout(() => { ws.close(); process.exit(); }, 500);
+     }, 1000);
+     "
+     ```
+   - Keep summaries short: ~35 chars for simple changes, bullets with `\n` for complex ones
+   - Focus on *what* changed semantically ("tightened bound in Prop 2.1"), not mechanically ("changed page 5")
+
+2. **Triage with the user.** The Changes tab shows three status dots per change:
+   - Blue = keep new version, Red = revert to old, Violet = discuss
+   - Review state syncs via Yjs and adjusts highlight opacity on canvas
+   - `n`/`p` keyboard shortcuts jump between changes with a pulse animation
+
+3. **Don't redo decided changes.** When summaries and triage state already exist (from a previous session or earlier in the current one), respect them. Only update summaries if the diff itself changes (reload signal clears both).
+
 ## Troubleshooting
 
 ### "Document not found in manifest"
