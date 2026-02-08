@@ -6,7 +6,7 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 
 | Task | Command |
 |------|---------|
-| **Open a paper** | `./scripts/open.sh doc-name` |
+| **Open a paper** | `./scripts/open.sh <tex-file \| dir \| doc-name>` |
 | Start dev server | `npm run dev` |
 | Start sync server | `npm run sync` |
 | Start collab session | `npm run collab` |
@@ -19,17 +19,13 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 ## Adding a New Paper
 
 ```bash
-./build-svg.sh /path/to/paper.tex short-name "Paper Title"
+./scripts/open.sh /path/to/paper.tex
+# or: ./scripts/open.sh /path/to/project-dir/
 ```
 
-This:
-1. Compiles LaTeX → DVI → SVG pages
-2. Extracts preamble macros for KaTeX rendering
-3. Updates `public/docs/manifest.json`
+This builds SVGs (if not already built), starts services + watcher, builds the diff, and opens the browser. The doc name defaults to the tex filename stem.
 
-Access at: `http://localhost:5173/?doc=short-name&room=review-session`
-
-No app rebuild needed.
+To build SVGs manually without starting services: `./build-svg.sh /path/to/paper.tex doc-name "Title"`
 
 ## Updating a Paper After Edits
 
@@ -165,12 +161,13 @@ Custom macros from the paper's preamble are automatically available (e.g., `$\E[
 When the user asks to review or view a paper (e.g. "let's review this", "review bregman", "pull up the paper"):
 
 ```bash
-./scripts/open.sh <doc-name>    # starts services if needed, opens browser
+./scripts/open.sh <tex-file | dir | doc-name>
 ```
 
-That's it for just viewing. The script checks if services are running and only starts them if needed.
-
-If the doc isn't built yet, run `./build-svg.sh /path/to/main.tex doc-name` first. Check `public/docs/manifest.json` for existing docs and their `texFile` paths.
+This handles everything: builds SVGs if needed, starts services + watcher, builds the diff, and opens the browser. Examples:
+- `./scripts/open.sh ~/work/bregman-lower-bound/bregman-lower-bound.tex`
+- `./scripts/open.sh ~/work/bregman-lower-bound/`
+- `./scripts/open.sh bregman-lower-bound`
 
 For an **iPad review session** (not just viewing), also:
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"`
