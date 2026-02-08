@@ -161,20 +161,21 @@ Custom macros from the paper's preamble are automatically available (e.g., `$\E[
 ## iPad Review via MCP
 
 ### Starting a session
-When the user asks to review a paper (e.g. "let's review this", "review bregman"):
+When the user asks to review or view a paper (e.g. "let's review this", "review bregman", "pull up the paper"):
+
+**Step 0: Check if services are running first.** Run `lsof -i :5173 | grep LISTEN`. If you get output, **skip to step 3** — everything is already up. Do NOT run npm commands or start services that are already running.
+
 1. Figure out the doc name and tex file:
    - If the user names a doc, check `public/docs/manifest.json` for its `texFile` path
    - If contextual (user is in a paper directory), find the main `.tex` file there and use the directory name as doc name
    - If the doc isn't built yet, run `./build-svg.sh /path/to/main.tex doc-name` first
-2. Check if services are already running (`lsof -i :5173`). If not, run `npm run collab` in background from the claude-tldraw directory.
-3. Print a QR code for the iPad:
-   ```
-   node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"
-   ```
-   Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN.
-4. Open the viewer locally: `open http://localhost:5173/?doc=DOC`
-5. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
-6. Enter the listen-respond loop with `wait_for_feedback(doc)`
+2. Only if services are NOT running: `npm run collab` in background from the claude-tldraw directory.
+3. Open the viewer: `open "http://localhost:5173/?doc=DOC"`
+4. If this is an iPad review session (not just viewing):
+   - Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"`
+   - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
+   - Open the tex file in Zed: `open -a Zed /path/to/file.tex`
+   - Enter the listen-respond loop with `wait_for_feedback(doc)`
 
 ### Listening for feedback
 Call `wait_for_feedback(doc)` in a loop. It blocks until:
