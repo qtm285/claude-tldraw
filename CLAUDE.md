@@ -169,6 +169,8 @@ This handles everything: builds SVGs if needed, starts services + watcher, build
 - `./scripts/open.sh ~/work/bregman-lower-bound/`
 - `./scripts/open.sh bregman-lower-bound`
 
+**Do NOT run `build-svg.sh`, `npm run collab`, `npm run dev`, `npm run sync`, or `npm run watch` individually.** `open.sh` handles all of it. Running them separately will duplicate services or conflict with what's already running.
+
 For an **iPad review session** (not just viewing), also:
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
