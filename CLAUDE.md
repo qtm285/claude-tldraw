@@ -7,52 +7,12 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | Task | Command |
 |------|---------|
 | **Open a paper** | `./scripts/open.sh <tex-file \| dir \| doc-name>` |
-| Start dev server | `npm run dev` |
-| Start sync server | `npm run sync` |
-| Start collab session | `npm run collab` |
-| Start collab + watcher | `npm run collab -- --watch /path/to/main.tex doc-name` |
-| Watch for changes | `npm run watch -- /path/to/main.tex doc-name` |
-| Build paper | `./build-svg.sh /path/to/paper.tex doc-name "Title"` |
+| Build paper (manual) | `./build-svg.sh /path/to/paper.tex doc-name "Title"` |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
-| Migrate annotations | `node scripts/migrate-annotations.js <room> <doc>` |
 
-## Adding a New Paper
+**Do NOT run `build-svg.sh`, `npm run collab`, `npm run dev`, `npm run sync`, or `npm run watch` individually.** `open.sh` handles all of it.
 
-```bash
-./scripts/open.sh /path/to/paper.tex
-# or: ./scripts/open.sh /path/to/project-dir/
-```
-
-This builds SVGs (if not already built), starts services + watcher, builds the diff, and opens the browser. The doc name defaults to the tex filename stem.
-
-To build SVGs manually without starting services: `./build-svg.sh /path/to/paper.tex doc-name "Title"`
-
-## Updating a Paper After Edits
-
-When the LaTeX source changes:
-
-```bash
-# 1. Rebuild SVGs (from the claude-tldraw directory)
-./build-svg.sh /path/to/paper.tex doc-name "Title"
-
-# 2. Start synctex server (if not running)
-node server/synctex-server.js doc-name:/path/to/paper.tex
-
-# 3. Migrate annotations to new positions
-node scripts/migrate-annotations.js <room-id> <doc-name>
-```
-
-### How annotation migration works
-
-- Each annotation stores a **source anchor**: `file.tex:line`
-- After rebuild, synctex resolves where that line now appears
-- Annotations move to follow their source content
-
-### When migration might fail
-
-- Source line was deleted → annotation stays in place (manual fix needed)
-- Major restructuring → some annotations may land in wrong spots
-- No synctex file → compile with `pdflatex -synctex=1` or use `latexmk`
+**If something goes wrong** (services won't start, build fails, viewer not loading, ports in use), delegate to the **ops agent** (`subagent_type: "ops"`). It knows the full build pipeline, service architecture, health checks, and common fixes.
 
 ## Architecture
 
@@ -61,89 +21,19 @@ node scripts/migrate-annotations.js <room-id> <doc-name>
 │   ├── manifest.json          # Document registry
 │   └── {doc-name}/
 │       ├── page-01.svg        # Rendered pages
-│       ├── page-02.svg
-│       └── macros.json        # KaTeX macros from preamble
+│       ├── macros.json        # KaTeX macros from preamble
+│       ├── lookup.json        # Synctex line → page/y mapping
+│       └── proof-info.json    # Theorem/proof pairs + dependencies
 ├── server/
 │   ├── sync-server.js         # Yjs WebSocket sync + persistence
 │   ├── synctex-server.js      # Source ↔ PDF coordinate mapping
 │   └── data/{room}.yjs        # Persisted annotations per room
 └── src/
     ├── MathNoteShape.tsx      # KaTeX-enabled sticky notes
+    ├── ProofStatementOverlay.tsx # Proof reader overlays
     ├── synctexAnchor.ts       # Client-side anchor utilities
     └── useYjsSync.ts          # Real-time sync hook
 ```
-
-## Collaboration
-
-### Collab session (recommended)
-
-Start everything in one command:
-
-```bash
-# All services (sync, dev, MCP)
-npm run collab
-
-# All services + auto-rebuild on .tex changes
-npm run collab -- --watch ~/papers/main.tex my-paper
-```
-
-Prints Tailscale/LAN URLs for collaborators. Viewers auto-detect the sync server from the hostname they're connecting to.
-
-### Auto-rebuild watcher
-
-Watch a .tex file and auto-rebuild + hot-reload viewers on change:
-
-```bash
-npm run watch -- /path/to/main.tex doc-name
-```
-
-The watcher:
-- Watches `.tex`, `.bib`, `.sty`, `.cls` files in the directory
-- Debounces changes (2s default, set `DEBOUNCE_MS` env var)
-- Runs `build-svg.sh` on change
-- Signals connected viewers to hot-reload via Yjs
-- Does an initial build on startup
-
-### Publishing snapshots
-
-Bake current annotations into a static snapshot and deploy to GitHub Pages:
-
-```bash
-npm run publish-snapshot -- doc-name
-```
-
-This exports annotations from the Yjs sync server, builds the static site, and deploys. The static viewer loads annotations read-only from `annotations.json` when no sync server is available.
-
-### Manual setup
-```bash
-npm run sync                    # Port 5176
-npm run dev                     # Port 5173
-
-# Share URL with room param
-http://<your-ip>:5173/?doc=paper&room=shared-review
-```
-
-### Remote (Fly.io)
-```bash
-cd server
-fly launch
-fly volumes create sync_data --size 1
-fly deploy
-```
-
-Set `VITE_SYNC_SERVER=wss://your-app.fly.dev` in `.env`
-
-## Room Management
-
-- Each `?room=` param creates an isolated annotation space
-- Annotations persist in `server/data/{room}.yjs`
-- Same room = shared annotations (real-time sync)
-- Different rooms = independent annotation sets
-
-### Suggested room naming
-- `paper-name-review` - Main review session
-- `paper-name-alice` - Personal annotations
-- `paper-name-v2` - After major revision
 
 ## Math Notes
 
@@ -164,20 +54,7 @@ When the user asks to review or view a paper (e.g. "let's review this", "review 
 ./scripts/open.sh <tex-file | dir | doc-name>
 ```
 
-This handles everything: builds SVGs if needed, starts services + watcher, builds the diff, and opens the browser. Examples:
-- `./scripts/open.sh ~/work/bregman-lower-bound/bregman-lower-bound.tex`
-- `./scripts/open.sh ~/work/bregman-lower-bound/`
-- `./scripts/open.sh bregman-lower-bound`
-
-**Do NOT run `build-svg.sh`, `npm run collab`, `npm run dev`, `npm run sync`, or `npm run watch` individually.** `open.sh` handles all of it. Running them separately will duplicate services or conflict with what's already running.
-
-How it works under the hood:
-- **Services** (dev server, sync server) are shared — started once, used by all docs
-- **Watchers** are per-doc — each doc gets its own `watch.mjs` process that auto-rebuilds SVGs and the diff on tex changes
-- If services are already running (another agent/session), `open.sh` skips startup but still adds a watcher for the new doc
-- The initial SVG build is synchronous (must finish before you can view); the diff build runs in the background
-- The diff compares the current tex on disk against the last git commit (HEAD)
-- After the initial build, the watcher handles all subsequent rebuilds — don't re-run `build-svg.sh` or `build-diff.sh` manually
+This handles everything: builds SVGs if needed, starts services + watcher, builds the diff, and opens the browser.
 
 For an **iPad review session** (not just viewing), also:
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"`
@@ -251,29 +128,26 @@ When starting a review of a diff document (`format: "diff"` in manifest):
 
 3. **Don't redo decided changes.** When summaries and triage state already exist (from a previous session or earlier in the current one), respect them. Only update summaries if the diff itself changes (reload signal clears both).
 
-## Troubleshooting
+### Proof reader
 
-### "Document not found in manifest"
-Run `./build-svg.sh` to add it.
+Press `r` to toggle proof reader mode. This highlights proof regions and shows a statement overlay panel (bottom-right) when scrolled to a cross-page proof.
 
-### Math macros not working
-Check `public/docs/{doc}/macros.json` exists. Rebuild if needed.
+**Statement panel** (green): shared-store TLDraw showing the theorem statement. Click header to jump to the statement page. Annotations drawn in the panel appear in the main view.
 
-### Annotations not syncing
-- Check sync server is running (`npm run sync`)
-- Check browser console for WebSocket errors
-- Verify same `?room=` param on all clients
+**Definition panel** (blue/indigo): appears above the statement panel when the proof references definitions, lemmas, or equations from other pages. Auto-selects the furthest-away dependency. Clickable badges in the statement header swap which dependency is shown; click the active badge to dismiss.
 
-### Migration moves annotations to wrong places
-- Source content may have moved significantly
-- Create a new room for the updated version
-- Or manually adjust misplaced annotations
+Data flow:
+- `compute-proof-pairing.mjs` scans proof bodies for `\ref{}`/`\eqref{}`, builds a global label map, resolves to page regions, outputs `dependencies` array in `proof-info.json`
+- `svgDocumentLoader.ts` loads `ProofDependency[]` per pair
+- `ProofStatementOverlay.tsx` renders stacked panels with two shared-store TLDraw editors
+
+Dependencies are sorted by page distance descending (furthest first). Same-page deps (dist=0) are filtered out. Section, figure, and table labels are excluded.
 
 ## Files Overview
 
 | File | Purpose |
 |------|---------|
-| `build-svg.sh` | Convert .tex → SVG pages + macros |
+| `build-svg.sh` | Convert .tex → SVG pages + macros + lookup + proof-info |
 | `server/sync-server.js` | Yjs WebSocket sync with persistence |
 | `server/synctex-server.js` | Source ↔ PDF coordinate mapping |
 | `scripts/extract-preamble.js` | Parse LaTeX macros for KaTeX |
@@ -281,9 +155,15 @@ Check `public/docs/{doc}/macros.json` exists. Rebuild if needed.
 | `scripts/watch.mjs` | Auto-rebuild on .tex changes + signal reload |
 | `scripts/collab.mjs` | Start all services for collaborative editing |
 | `scripts/publish-snapshot.mjs` | Export annotations + deploy to Pages |
+| `scripts/compute-proof-pairing.mjs` | Match theorems to proofs, scan deps, output proof-info.json |
 | `src/MathNoteShape.tsx` | Custom TLDraw shape with KaTeX |
+| `src/ProofStatementOverlay.tsx` | Proof reader: statement + definition panel overlays |
 | `src/useYjsSync.ts` | Real-time collaboration hook |
 | `src/synctexAnchor.ts` | Anchor storage and resolution |
+
+## Self-Service Rule
+
+You have puppeteer and MCP tools available. Use them to check console output, read screen content, take screenshots, verify UI state, count elements, read error messages, etc. Never ask the user to report what they see on screen — do it yourself.
 
 ## Permissions
 
