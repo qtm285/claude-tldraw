@@ -6,7 +6,7 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 
 | Task | Command |
 |------|---------|
-| **Start the server** | `node server/unified-server.mjs` |
+| **Start the server** | `ctd server start` |
 | **Create a project** | `ctd create <name> --dir /path/to/project [--main main.tex]` |
 | **Watch for edits** | `ctd watch /path/to/main.tex <name>` |
 | **Open in browser** | `ctd open <name>` |
@@ -17,6 +17,8 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
 **The unified server is the primary way to run.** It handles Yjs sync, doc asset serving, the project API, and the viewer SPA — all on one port (default 5176). The `ctd` CLI creates projects, pushes source files, and watches for changes. The server handles all building.
+
+**IMPORTANT: Always use `ctd server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `ctd server stop` to stop, `ctd server status` to check.
 
 `open.sh` and `collab.mjs` still work for backward compatibility but are superseded by the unified server + `ctd`.
 
