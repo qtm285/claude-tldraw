@@ -6,33 +6,90 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 
 | Task | Command |
 |------|---------|
-| **Open a paper** | `./scripts/open.sh <tex-file \| dir \| doc-name>` |
-| Build paper (manual) | `./build-svg.sh /path/to/paper.tex doc-name "Title"` |
+| **Start the server** | `node server/unified-server.mjs` |
+| **Create a project** | `ctd create <name> --dir /path/to/project [--main main.tex]` |
+| **Watch for edits** | `ctd watch /path/to/main.tex <name>` |
+| **Open in browser** | `ctd open <name>` |
+| List projects | `ctd list` |
+| Build status | `ctd status <name>` |
+| Push files manually | `ctd push <name> --dir /path/to/project` |
+| Legacy: open a paper | `./scripts/open.sh <tex-file \| dir \| doc-name>` |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
-**Do NOT run `build-svg.sh`, `npm run collab`, `npm run dev`, `npm run sync`, or `npm run watch` individually.** `open.sh` handles all of it.
+**The unified server is the primary way to run.** It handles Yjs sync, doc asset serving, the project API, and the viewer SPA — all on one port (default 5176). The `ctd` CLI creates projects, pushes source files, and watches for changes. The server handles all building.
+
+`open.sh` and `collab.mjs` still work for backward compatibility but are superseded by the unified server + `ctd`.
 
 **If something goes wrong** (services won't start, build fails, viewer not loading, ports in use), delegate to the **ops agent** (`subagent_type: "ops"`). It knows the full build pipeline, service architecture, health checks, and common fixes.
 
 ## Architecture
 
 ```
-├── public/docs/
-│   ├── manifest.json          # Document registry
-│   └── {doc-name}/
-│       ├── page-01.svg        # Rendered pages
-│       ├── macros.json        # KaTeX macros from preamble
-│       ├── lookup.json        # Synctex line → page/y mapping
-│       └── proof-info.json    # Theorem/proof pairs + dependencies
-├── server/
-│   ├── sync-server.js         # Yjs WebSocket sync + persistence
-│   ├── synctex-server.js      # Source ↔ PDF coordinate mapping
-│   └── data/{room}.yjs        # Persisted annotations per room
-└── src/
-    ├── MathNoteShape.tsx      # KaTeX-enabled sticky notes
-    ├── ProofStatementOverlay.tsx # Proof reader overlays
-    ├── synctexAnchor.ts       # Client-side anchor utilities
-    └── useYjsSync.ts          # Real-time sync hook
+server/
+├── unified-server.mjs        # Single process: Express + Yjs WS + SPA + API
+├── lib/
+│   ├── yjs-sync.mjs           # Yjs doc management + persistence
+│   ├── project-store.mjs      # Project CRUD (server/projects/{name}/)
+│   └── build-runner.mjs       # Build pipeline (latexmk → dvisvgm → synctex → proof-pairing)
+├── routes/
+│   └── projects.mjs           # REST API: /api/projects/*
+├── projects/                  # Per-project storage
+│   └── {name}/
+│       ├── project.json       # Metadata (name, title, pages, buildStatus)
+│       ├── source/            # Uploaded tex/bib/sty/cls/figure files
+│       ├── output/            # Build output (SVGs, lookup, macros, proof-info)
+│       └── build.log
+├── data/{room}.yjs            # Persisted annotations per room
+└── sync-server.js             # Legacy standalone Yjs server (still works)
+
+cli/
+├── ctd.mjs                    # CLI entry point (installed as `ctd`)
+└── lib/
+    └── watcher.mjs            # File watcher → HTTP push to server
+
+src/                           # Viewer SPA (React + TLDraw)
+├── SvgDocument.tsx            # SVG page loading, layout, reload handling
+├── MathNoteShape.tsx          # KaTeX-enabled sticky notes
+├── ProofStatementOverlay.tsx  # Proof reader overlays
+├── useYjsSync.ts              # Real-time Yjs sync hook
+├── synctexAnchor.ts           # Source-anchored annotation resolution
+└── svgDocumentLoader.ts       # Document loading, manifest, proof-info
+
+mcp-server/
+├── index.mjs                  # MCP tools (wait_for_feedback, annotations, etc.)
+├── data-source.mjs            # Reads doc assets from disk or HTTP (CTD_SERVER)
+└── svg-text.mjs               # SVG text extraction for shape interpretation
+
+public/docs/                   # Legacy doc storage (served as fallback)
+├── manifest.json              # Legacy document registry
+└── {doc-name}/                # SVGs + metadata
+```
+
+### How it fits together
+
+```
+Author's machine                     Server (localhost or remote, port 5176)
+┌──────────────────┐                 ┌──────────────────────────────┐
+│ Editor (Zed)     │                 │ unified-server.mjs           │
+│     ↓ save       │                 │                              │
+│ ctd watch        │──POST /push───→ │ Project API → Build runner   │
+│                  │                 │   latexmk → dvisvgm → etc.  │
+│ Claude Code      │                 │   ↓                          │
+│ └─ MCP (stdio)   │──Yjs WS──────→ │ Yjs sync + signal:reload     │
+│                  │                 │   ↓                          │
+│ iPad viewer      │←─Yjs WS───────│ Viewer SPA (/docs/* assets)  │
+└──────────────────┘                 └──────────────────────────────┘
+```
+
+**Server URL resolution:** `CTD_SERVER` env → `--server` flag → `~/.config/ctd/config.json` → `http://localhost:5176`
+
+### For viewer development only
+
+Working on the React/TLDraw code (not normal paper review):
+
+```bash
+node server/unified-server.mjs   # API + Yjs on 5176
+npx vite                          # HMR on 5173, proxies /api and /docs to 5176
 ```
 
 ## Math Notes
@@ -51,13 +108,16 @@ Custom macros from the paper's preamble are automatically available (e.g., `$\E[
 When the user asks to review or view a paper (e.g. "let's review this", "review bregman", "pull up the paper"):
 
 ```bash
+# If using unified server (preferred):
+ctd create <name> --dir /path/to/project   # first time only
+ctd open <name>
+
+# Legacy (still works):
 ./scripts/open.sh <tex-file | dir | doc-name>
 ```
 
-This handles everything: builds SVGs if needed, starts services + watcher, builds the diff, and opens the browser.
-
 For an **iPad review session** (not just viewing), also:
-1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5173/?doc=DOC', {small: true}))"`
+1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5176/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
 2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
 3. Enter the listen-respond loop with `wait_for_feedback(doc)`
@@ -74,11 +134,13 @@ Call `wait_for_feedback(doc)` in a loop. It blocks until:
 - `list_annotations(doc)` — all math-note stickies
 
 ### Responding
-- `add_annotation(doc, line, text)` — persistent note anchored to source line
-- `send_note(doc, line, text)` — quick note via WebSocket + Yjs
+- `add_annotation(doc, line, text, file?)` — persistent note anchored to source line
+- `send_note(doc, line, text, file?)` — quick note via WebSocket + Yjs
 - `reply_annotation(doc, id, text)` — append to existing note
 - `highlight_location(file, line)` — flash red circle at source line
-- `scroll_to_line(doc, line)` — scroll viewer to source line
+- `scroll_to_line(doc, line, file?)` — scroll viewer to source line
+
+**Multi-file projects:** For documents that use `\input{}`/`\include{}`, pass the `file` parameter (e.g. `file="appendix.tex"`) to target lines in input files. Without `file`, tools default to the main tex file. The `lookup.json` keys input file lines as `"filename.tex:N"`.
 
 ### Cleanup
 - `delete_annotation(doc, id)` — remove a note
@@ -143,24 +205,6 @@ Data flow:
 
 Dependencies are sorted by page distance descending (furthest first). Same-page deps (dist=0) are filtered out. Section, figure, and table labels are excluded.
 
-## Files Overview
-
-| File | Purpose |
-|------|---------|
-| `build-svg.sh` | Convert .tex → SVG pages + macros + lookup + proof-info |
-| `server/sync-server.js` | Yjs WebSocket sync with persistence |
-| `server/synctex-server.js` | Source ↔ PDF coordinate mapping |
-| `scripts/extract-preamble.js` | Parse LaTeX macros for KaTeX |
-| `scripts/migrate-annotations.js` | Reposition annotations after rebuild |
-| `scripts/watch.mjs` | Auto-rebuild on .tex changes + signal reload |
-| `scripts/collab.mjs` | Start all services for collaborative editing |
-| `scripts/publish-snapshot.mjs` | Export annotations + deploy to Pages |
-| `scripts/compute-proof-pairing.mjs` | Match theorems to proofs, scan deps, output proof-info.json |
-| `src/MathNoteShape.tsx` | Custom TLDraw shape with KaTeX |
-| `src/ProofStatementOverlay.tsx` | Proof reader: statement + definition panel overlays |
-| `src/useYjsSync.ts` | Real-time collaboration hook |
-| `src/synctexAnchor.ts` | Anchor storage and resolution |
-
 ## Self-Service Rule
 
 You have puppeteer and MCP tools available. Use them to check console output, read screen content, take screenshots, verify UI state, count elements, read error messages, etc. Never ask the user to report what they see on screen — do it yourself.
@@ -169,7 +213,7 @@ You have puppeteer and MCP tools available. Use them to check console output, re
 
 These operations are pre-approved for autonomous work:
 
-- **Bash**: `npm run *`, `node`, shell scripts in this project, `curl` for local API testing, `open` for browser, process management (`pkill`, `lsof`)
+- **Bash**: `npm run *`, `node`, `ctd`, shell scripts in this project, `curl` for local API testing, `open` for browser, process management (`pkill`, `lsof`)
 - **Edit/Write**: Any file in `/Users/skip/work/claude-tldraw/`
 - **Git**: All operations within this repo (commit, push, branch, etc.)
 
