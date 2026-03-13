@@ -73,8 +73,7 @@ server/
 │       ├── source/            # Uploaded tex/bib/sty/cls/figure files
 │       ├── output/            # Build output (SVGs, lookup, macros, proof-info)
 │       └── build.log
-├── data/{room}.yjs            # Persisted annotations per room
-└── sync-server.js             # Legacy standalone Yjs server (still works)
+└── data/{room}.yjs            # Persisted annotations per room
 
 cli/
 ├── tlda.mjs                    # CLI entry point (installed as `tlda`)
@@ -171,11 +170,16 @@ For an **iPad review session** (dedicated to review, not multitasking):
 3. Enter the listen-respond loop with `wait_for_feedback(doc)`
 
 ### Listening for feedback
-Call `wait_for_feedback(doc)` in a loop. It blocks until:
+
+**`wait_for_feedback` is ONLY for dedicated iPad review sessions** — where Skip is actively drawing on the document and your sole job is to respond to annotations. If your task is to write, edit, analyze, or do anything else, use `tlda monitor` instead (see next section).
+
+In a dedicated review session, call `wait_for_feedback(doc)` in a loop. It blocks until:
 - Ping (user tapped share) — immediate
 - Text selection — 2s debounce
 - Drawn shape (pen, highlight, arrow, geo) — 5s debounce
 - Annotation edit — 5s debounce
+
+**Timeout escalation:** If `wait_for_feedback` times out twice in a row with no feedback, the review session is probably over. Switch to `tlda monitor add <doc>` and resume your primary task. Do not keep calling `wait_for_feedback` indefinitely.
 
 ### Background listening (work + monitor)
 
@@ -231,7 +235,7 @@ The Notes tab in the panel has sort (document order / recency) and filter (all /
 - `delete_annotation(doc, id)` — remove a note (deletes all tabs)
 
 ### Review loop behavior
-When the user says they're reviewing a document, enter a listen-respond loop:
+When the user explicitly says they're reviewing a document on the iPad — and reviewing is your primary task, not a side activity — enter a listen-respond loop:
 1. Call `wait_for_feedback(doc)` to block for the next annotation
 2. Interpret what came in (pen stroke, highlight, text selection, etc.)
 3. Scroll Zed to the relevant source line: `zed /path/to/file.tex:LINE`
@@ -240,7 +244,12 @@ When the user says they're reviewing a document, enter a listen-respond loop:
 
 Always keep Zed in sync: whenever you're discussing, highlighting, or responding to a specific source line, scroll Zed there with `zed file.tex:LINE`. This is the default behavior, not something the user should have to ask for.
 
-If the user interrupts with a chat message, handle it, then resume `wait_for_feedback`. The default is to stay in the loop until the user says they're done.
+If the user interrupts with a chat message, handle it, then resume `wait_for_feedback`. Stay in the loop until the user says they're done, or until you get 2 consecutive timeouts (then switch to `tlda monitor`).
+
+**Do NOT enter this loop if:**
+- Your primary task is writing, editing, or analyzing (use `tlda monitor` for background notifications)
+- The manager told you to "monitor" a document (that means `tlda monitor`, not `wait_for_feedback`)
+- You have a delegated task from the agent manager — do that task, use `tlda monitor` if you also need to watch a doc
 
 ### Diff review workflow
 
