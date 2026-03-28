@@ -43,6 +43,10 @@ Math works the same as in LaTeX: `$inline$` and `$$display$$`. KaTeX renders ser
 
 The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto projects. All MCP annotation tools (`add_annotation`, `wait_for_feedback`, etc.) work normally. Source-line anchoring is not yet implemented for markdown — notes are placed visually on the canvas.
 
+## No Backward Compatibility
+
+**Do not add backward-compat shims, fallbacks, or migration layers.** When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt. No old-param fallbacks, no "accept both formats," no compatibility cruft.
+
 ## TLDraw-Native UI Rule
 
 **All UI that lives on the TLDraw canvas MUST use TLDraw-native patterns** unless there's a specific, documented reason not to. This means:
