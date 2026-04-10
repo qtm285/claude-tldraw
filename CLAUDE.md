@@ -7,7 +7,7 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | Task | Command |
 |------|---------|
 | **Start the server** | `tlda server start` |
-| **Start all watchers** | `tlda watch-all start` |
+| **Start the fleet daemon** | `tlda watch start` (alias: `tlda watch-all start`) |
 | **Open in browser** | `tlda open <name>` |
 | List projects | `tlda list` |
 | Build status | `tlda status <name>` |
@@ -18,7 +18,7 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | Block for feedback | `tlda listen <doc>` (one-shot, for idle agents) |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
-**`tlda watch-all start`** auto-discovers all projects with a `sourceDir` and watches them. It polls for new projects every 30s, so `tlda create` picks them up automatically. This is the standard way to run watchers — no per-project `./watch` scripts needed.
+**`tlda watch start`** runs the per-machine **fleet-daemon** (`bin/fleet-daemon.mjs`), which watches every project's source directory AND every Claude Code session JSONL on this machine, pushing events (source changes, activity cards, terminal-user chat) to the tlda server over a single WebSocket. The server tells the daemon what to watch via a `daemon-welcome` message and pushes `projects-updated` when new projects are created — no polling needed. `tlda watch-all start` is an alias for the same command. The daemon also handles tmux RPCs (interrupt, send-key, capture-pane, restart-mcp, kick) routed by `machine_id`.
 
 **Never use `tlda build` to work around pipeline issues.** It bypasses change detection and masks bugs. If something isn't rebuilding when it should, fix the pipeline.
 
@@ -35,8 +35,8 @@ tlda supports a `markdown` format for lightweight notes and scratch documents. N
 tlda create my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
 # --main defaults to the first .md file found in the dir
 
-# The watcher auto-detects .md changes and rebuilds
-tlda watch-all start
+# The fleet daemon auto-detects .md changes and rebuilds
+tlda watch start
 ```
 
 Math works the same as in LaTeX: `$inline$` and `$$display$$`. KaTeX renders server-side; CSS served from `/katex/`.
@@ -159,7 +159,7 @@ Custom macros from the paper's preamble are automatically available (e.g., `$\E[
 When the user asks to review or view a paper (e.g. "let's review this", "review bregman", "pull up the paper"):
 
 1. Make sure the server is running: `tlda server start`
-2. Start all watchers: `tlda watch-all start`
+2. Start the fleet daemon: `tlda watch start`
 3. Open in browser: `tlda open <name>`
 
 **If you'll be doing other work while the doc is open** (editing code, running sims, writing), enable background monitoring so feedback appears automatically:
