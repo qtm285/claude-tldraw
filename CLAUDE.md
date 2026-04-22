@@ -58,6 +58,12 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 
 Deviations from this rule require justification in a code comment explaining why the TLDraw-native approach doesn't work. "It was easier" is not a justification.
 
+**Custom shape types must be registered in TWO places, and props must match exactly.** If you create or modify a custom shape type:
+1. **Client**: implement `FooShapeUtil extends BaseBoxShapeUtil` in `src/shapes/`, import and add to `customUtils` array in `SvgDocument.tsx`
+2. **Server**: add `'foo-shape': { props: { ... }, migrations: createMigrationSequence(...) }` to `customShapeSchemas` in `server/lib/sync-rooms.mjs`
+
+The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props` on the client — same field names, same types. Adding, removing, or renaming a prop on either side without updating the other causes a `TLSyncError` that crashes sync for everyone in that room. **Any time you change a shape's props, update both files.**
+
 **Visual design is deliberately subtle.** UI chrome should be nearly invisible until hovered or needed. Follow the conventions established by existing elements (e.g., `.build-warning-badge`): 10% opacity default, 60% on hover, 0.3s transition. Use CSS classes with `.tl-theme__dark` variants — never hardcode colors inline. New UI elements should look like they belong next to existing ones in size, weight, and opacity.
 
 ## Architecture
