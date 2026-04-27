@@ -309,6 +309,28 @@ Data flow:
 
 Dependencies are sorted by page distance descending (furthest first). Same-page deps (dist=0) are filtered out. Section, figure, and table labels are excluded.
 
+## Voice Input
+
+Voice input uses **whisper-stream** for local real-time transcription. No Google dependency, no network latency, runs entirely on the Mac's GPU.
+
+**Architecture:**
+```
+mic → whisper-stream (SDL) → stdout → whisper-bridge.mjs → ws:8179 → browser
+```
+
+- `whisper-stream` captures the mic directly (via SDL, not the browser) and transcribes in 3-second streaming steps with VAD
+- `bin/whisper-bridge.mjs` relays transcription text over WebSocket to the browser
+- The browser connects to `ws://localhost:8179` and appends transcript chunks to the active chat textarea
+- Falls back to Chrome's Web Speech API if the bridge isn't running
+
+**Starting:** `tlda server start` auto-starts the whisper bridge. Manual start: `node bin/whisper-bridge.mjs`
+
+**Model:** Uses `small.en` (`/opt/homebrew/share/whisper-cpp/ggml-small.en.bin`). Override with `--model /path/to/model.bin`.
+
+**Forcing Chrome:** Add `&voice=chrome` to the URL to use Chrome's Web Speech API instead.
+
+**Log:** `~/.config/tlda/whisper-bridge.log`
+
 ## Self-Service Rule
 
 **NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have puppeteer, MCP tools, `tlda preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
