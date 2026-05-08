@@ -58,6 +58,12 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 
 Deviations from this rule require justification in a code comment explaining why the TLDraw-native approach doesn't work. "It was easier" is not a justification.
 
+**Custom shape types must be registered in TWO places, and props must match exactly.** If you create or modify a custom shape type:
+1. **Client**: implement `FooShapeUtil extends BaseBoxShapeUtil` in `src/shapes/`, import and add to `customUtils` array in `SvgDocument.tsx`
+2. **Server**: add `'foo-shape': { props: { ... }, migrations: createMigrationSequence(...) }` to `customShapeSchemas` in `server/lib/sync-rooms.mjs`
+
+The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props` on the client — same field names, same types. Adding, removing, or renaming a prop on either side without updating the other causes a `TLSyncError` that crashes sync for everyone in that room. **Any time you change a shape's props, update both files.**
+
 **Visual design is deliberately subtle.** UI chrome should be nearly invisible until hovered or needed. Follow the conventions established by existing elements (e.g., `.build-warning-badge`): 10% opacity default, 60% on hover, 0.3s transition. Use CSS classes with `.tl-theme__dark` variants — never hardcode colors inline. New UI elements should look like they belong next to existing ones in size, weight, and opacity.
 
 ## Architecture
@@ -302,6 +308,28 @@ Data flow:
 - `ProofStatementOverlay.tsx` renders stacked panels with two shared-store TLDraw editors
 
 Dependencies are sorted by page distance descending (furthest first). Same-page deps (dist=0) are filtered out. Section, figure, and table labels are excluded.
+
+## Voice Input
+
+Voice input uses **whisper-stream** for local real-time transcription. No Google dependency, no network latency, runs entirely on the Mac's GPU.
+
+**Architecture:**
+```
+mic → whisper-stream (SDL) → stdout → whisper-bridge.mjs → ws:8179 → browser
+```
+
+- `whisper-stream` captures the mic directly (via SDL, not the browser) and transcribes in 3-second streaming steps with VAD
+- `bin/whisper-bridge.mjs` relays transcription text over WebSocket to the browser
+- The browser connects to `ws://localhost:8179` and appends transcript chunks to the active chat textarea
+- Falls back to Chrome's Web Speech API if the bridge isn't running
+
+**Starting:** `tlda server start` auto-starts the whisper bridge. Manual start: `node bin/whisper-bridge.mjs`
+
+**Model:** Uses `small.en` (`/opt/homebrew/share/whisper-cpp/ggml-small.en.bin`). Override with `--model /path/to/model.bin`.
+
+**Forcing Chrome:** Add `&voice=chrome` to the URL to use Chrome's Web Speech API instead.
+
+**Log:** `~/.config/tlda/whisper-bridge.log`
 
 ## Self-Service Rule
 
