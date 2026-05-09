@@ -43,6 +43,10 @@ Math works the same as in LaTeX: `$inline$` and `$$display$$`. KaTeX renders ser
 
 The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto projects. All MCP annotation tools (`add_annotation`, `wait_for_feedback`, etc.) work normally. Source-line anchoring is not yet implemented for markdown — notes are placed visually on the canvas.
 
+## Not a Keyboard App
+
+**This is a voice-and-touch-first application.** Do not propose keyboard shortcuts as primary access points for features. The primary user has RSI and uses voice input and iPad touch — keybindings are inaccessible. When designing UI access patterns, use toolbar buttons, touch targets, or voice commands. A keybinding may exist as a secondary path but never as the primary or only trigger.
+
 ## No Backward Compatibility
 
 **Do not add backward-compat shims, fallbacks, or migration layers.** When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt. No old-param fallbacks, no "accept both formats," no compatibility cruft.
