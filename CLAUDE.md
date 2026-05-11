@@ -47,6 +47,14 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 
 **This is a voice-and-touch-first application.** Do not propose keyboard shortcuts as primary access points for features. The primary user has RSI and uses voice input and iPad touch — keybindings are inaccessible. When designing UI access patterns, use toolbar buttons, touch targets, or voice commands. A keybinding may exist as a secondary path but never as the primary or only trigger.
 
+## Multi-Machine Architecture — No Local Fallbacks
+
+**The fleet abstraction assumes agents can be on different machines.** This is not a hypothetical — agents run on the Mac Mini (closet server), the tlda server runs on the laptop, and the UI is accessed from iPad/phone/laptop. These are genuinely separate machines.
+
+**The daemon is the bridge from an agent's machine to the server.** It can access files that the server cannot. Any operation that needs to touch files on an agent's machine MUST route through that agent's daemon via RPC. Never "fall back" to local processing when the daemon is unreachable — the file is not on the server's machine.
+
+**Concrete rule:** If an RPC route resolves to `via: 'none'`, return 503. Do not attempt to process the request locally as a substitute. Silently succeeding on a single-machine dev setup while failing on the real multi-machine setup is the worst kind of bug.
+
 ## No Backward Compatibility
 
 **Do not add backward-compat shims, fallbacks, or migration layers.** When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt. No old-param fallbacks, no "accept both formats," no compatibility cruft.
