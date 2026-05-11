@@ -49,7 +49,7 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 
 ## Multi-Machine Architecture — No Local Fallbacks
 
-**The fleet abstraction assumes agents can be on different machines.** This is not a hypothetical — agents run on the Mac Mini (closet server), the tlda server runs on the laptop, and the UI is accessed from iPad/phone/laptop. These are genuinely separate machines.
+**The fleet abstraction assumes agents can be on different machines.** This is not a hypothetical. The real deployment: agents run on a Mac Mini (NFS server in a closet), the tlda server runs on a laptop, and the UI is accessed from the laptop, iPad, or phone. These are genuinely separate machines with separate filesystems.
 
 **The daemon is the bridge from an agent's machine to the server.** It can access files that the server cannot. Any operation that needs to touch files on an agent's machine MUST route through that agent's daemon via RPC. Never "fall back" to local processing when the daemon is unreachable — the file is not on the server's machine.
 
