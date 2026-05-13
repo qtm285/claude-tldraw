@@ -55,6 +55,35 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 
 **Concrete rule:** If an RPC route resolves to `via: 'none'`, return 503. Do not attempt to process the request locally as a substitute. Silently succeeding on a single-machine dev setup while failing on the real multi-machine setup is the worst kind of bug.
 
+## Two Communication Systems: Yjs vs. Fire-and-Forget Signals
+
+The viewer has two distinct channels between server and browser. Knowing which to use (and why) prevents the class of bug where the viewer shows stale state after a reconnect.
+
+### Yjs shapes — convergent state
+
+Yjs is a CRDT: any client that connects or reconnects always converges to the latest shared state. **Use Yjs for anything that must be correct even if missed.**
+
+Examples:
+- The `doc-version` sentinel shape (`shape:doc-version--sentinel`) — stores `commitHash` and `buildReadyAt` so the corner timestamp is always accurate after reconnect
+- Annotations, highlights, notes — all annotation state
+
+### Fire-and-forget signals — transient events
+
+Signals are custom messages piggybacked on the Yjs WebSocket via `broadcastSignal()`. They are not persisted; a client that misses one (because it was disconnected) never receives it. **Use fire-and-forget only when missing one is self-correcting.**
+
+Examples:
+- `signal:reload` — triggers page reload after a build; self-correcting because the new SVG files are already on disk, a tab opened later will just load the current version
+- `signal:build-status` — drives build progress pills; self-correcting because pills are ephemeral UI
+- `signal:camera` / `signal:scroll` — presenter sync; self-correcting because the next camera move updates it
+
+### The principle
+
+> **Fire-and-forget is appropriate when missing one is self-correcting. Yjs is required when missing means the viewer stays wrong.**
+
+### Missed-reload detection
+
+Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
+
 ## No Backward Compatibility
 
 **Do not add backward-compat shims, fallbacks, or migration layers.** When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt. No old-param fallbacks, no "accept both formats," no compatibility cruft.
