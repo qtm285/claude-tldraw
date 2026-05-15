@@ -41,11 +41,48 @@ tlda watch start
 
 Math works the same as in LaTeX: `$inline$` and `$$display$$`. KaTeX renders server-side; CSS served from `/katex/`.
 
-The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto projects. All MCP annotation tools (`add_annotation`, `wait_for_feedback`, etc.) work normally. Source-line anchoring is not yet implemented for markdown — notes are placed visually on the canvas.
+The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto projects. All MCP annotation tools (`add_note`, `read_annotations`, etc.) work normally. Source-line anchoring is not yet implemented for markdown — notes are placed visually on the canvas.
 
 ## Not a Keyboard App
 
 **This is a voice-and-touch-first application.** Do not propose keyboard shortcuts as primary access points for features. The primary user has RSI and uses voice input and iPad touch — keybindings are inaccessible. When designing UI access patterns, use toolbar buttons, touch targets, or voice commands. A keybinding may exist as a secondary path but never as the primary or only trigger.
+
+## Multi-Machine Architecture — No Local Fallbacks
+
+**The fleet abstraction assumes agents can be on different machines.** This is not a hypothetical. The real deployment: agents run on a Mac Mini (NFS server in a closet), the tlda server runs on a laptop, and the UI is accessed from the laptop, iPad, or phone. These are genuinely separate machines with separate filesystems.
+
+**The daemon is the bridge from an agent's machine to the server.** It can access files that the server cannot. Any operation that needs to touch files on an agent's machine MUST route through that agent's daemon via RPC. Never "fall back" to local processing when the daemon is unreachable — the file is not on the server's machine.
+
+**Concrete rule:** If an RPC route resolves to `via: 'none'`, return 503. Do not attempt to process the request locally as a substitute. Silently succeeding on a single-machine dev setup while failing on the real multi-machine setup is the worst kind of bug.
+
+## Two Communication Systems: Yjs vs. Fire-and-Forget Signals
+
+The viewer has two distinct channels between server and browser. Knowing which to use (and why) prevents the class of bug where the viewer shows stale state after a reconnect.
+
+### Yjs shapes — convergent state
+
+Yjs is a CRDT: any client that connects or reconnects always converges to the latest shared state. **Use Yjs for anything that must be correct even if missed.**
+
+Examples:
+- The `doc-version` sentinel shape (`shape:doc-version--sentinel`) — stores `commitHash` and `buildReadyAt` so the corner timestamp is always accurate after reconnect
+- Annotations, highlights, notes — all annotation state
+
+### Fire-and-forget signals — transient events
+
+Signals are custom messages piggybacked on the Yjs WebSocket via `broadcastSignal()`. They are not persisted; a client that misses one (because it was disconnected) never receives it. **Use fire-and-forget only when missing one is self-correcting.**
+
+Examples:
+- `signal:reload` — triggers page reload after a build; self-correcting because the new SVG files are already on disk, a tab opened later will just load the current version
+- `signal:build-status` — drives build progress pills; self-correcting because pills are ephemeral UI
+- `signal:camera` / `signal:scroll` — presenter sync; self-correcting because the next camera move updates it
+
+### The principle
+
+> **Fire-and-forget is appropriate when missing one is self-correcting. Yjs is required when missing means the viewer stays wrong.**
+
+### Missed-reload detection
+
+Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
 
 ## No Backward Compatibility
 
@@ -103,7 +140,7 @@ src/                           # Viewer SPA (React + TLDraw)
 └── svgDocumentLoader.ts       # Document loading, manifest, proof-info
 
 mcp-server/
-├── index.mjs                  # MCP tools (wait_for_feedback, annotations, etc.)
+├── index.mjs                  # MCP tools (read_annotations, add_note, screenshot, etc.)
 ├── data-source.mjs            # Reads doc assets from disk or HTTP (TLDA_SERVER)
 └── svg-text.mjs               # SVG text extraction for shape interpretation
 
@@ -181,19 +218,16 @@ For an **iPad review session** (dedicated to review, not multitasking):
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5176/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
 2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
-3. Enter the listen-respond loop with `wait_for_feedback(doc)`
+3. For a dedicated review session, run `tlda listen <doc>` (blocks until feedback). For background watching while you work, use `tlda monitor add <doc>`.
 
 ### Listening for feedback
 
-**`wait_for_feedback` is ONLY for dedicated iPad review sessions** — where Skip is actively drawing on the document and your sole job is to respond to annotations. If your task is to write, edit, analyze, or do anything else, use `tlda monitor` instead (see next section).
+There is no blocking MCP tool for review. Use the CLI:
 
-In a dedicated review session, call `wait_for_feedback(doc)` in a loop. It blocks until:
-- Ping (user tapped share) — immediate
-- Text selection — 2s debounce
-- Drawn shape (pen, highlight, arrow, geo) — 5s debounce
-- Annotation edit — 5s debounce
+- **`tlda monitor add <doc>`** — hook-based. Feedback shows up between your tool calls as `[tlda feedback] …`. Right for any agent that's actively working on a task.
+- **`tlda listen <doc>`** — blocking. Right for an idle agent or a script that has nothing to do until feedback arrives. Suitable for `run_in_background`.
 
-**Timeout escalation:** If `wait_for_feedback` times out twice in a row with no feedback, the review session is probably over. Switch to `tlda monitor add <doc>` and resume your primary task. Do not keep calling `wait_for_feedback` indefinitely.
+When feedback arrives, read the details with `read_annotations(doc)`.
 
 ### Background listening (work + monitor)
 
@@ -219,26 +253,25 @@ tlda listen spinoff3 --timeout 600
 **Summary:**
 - **`tlda monitor`** — hook-based, automatic, for agents actively working
 - **`tlda listen`** — blocking CLI, for idle agents or scripts
-- **`wait_for_feedback`** — MCP tool, for dedicated review sessions (richer output, heartbeat)
 
 ### Reading annotations
-- `read_pen_annotations(doc)` — all drawn shapes with source line mapping
-- `list_annotations(doc)` — all math-note stickies
+- `read_annotations(doc)` — all annotations: math notes, highlighter strokes, pen strokes, arrows, geo, text. Source-line anchored. Filter by `type`, `since`, `startLine`/`endLine`, `unaddressed_only`. Sort by `document` (default) or `time`.
 
 ### Responding
-- `add_annotation(doc, line, text, file?)` — persistent note anchored to source line
-- `send_note(doc, line, text, file?)` — quick note via WebSocket + Yjs
-- `reply_annotation(doc, id, text)` — create a reply in the note's thread (new tab)
-- `highlight_location(file, line)` — flash red circle at source line
+- `add_note(doc, line, text, file?)` — persistent math note anchored to a source line
+- `reply_note(doc, id, text)` — append a reply tab to an existing note
+- `flash_location(file, line)` — flash a red circle at a source line
 - `scroll_to_line(doc, line, file?)` — scroll viewer to source line
+- `delete_annotation(doc, id)` — remove a note (or any annotation shape)
+- `screenshot(doc, target)` — capture viewer (target: viewport / screen / annotation ref / explicit bounds)
 
 **Multi-file projects:** For documents that use `\input{}`/`\include{}`, pass the `file` parameter (e.g. `file="appendix.tex"`) to target lines in input files. Without `file`, tools default to the main tex file. The `lookup.json` keys input file lines as `"filename.tex:N"`.
 
 ### Note threading
 Notes support reply chains via **threads**. A thread is a group of notes sharing the same canvas position, displayed as stacked tabs.
 
-- `reply_annotation(doc, id, text)` adds a new tab to the note's `tabs` array and switches to it.
-- `list_annotations(doc)` returns `tabCount`, `activeTab`, and `tabs` fields when a note has multiple tabs.
+- `reply_note(doc, id, text)` adds a new tab to the note's `tabs` array and switches to it.
+- `read_annotations(doc)` returns `tabCount`, `activeTab`, and `tabs` fields when a note has multiple tabs.
 - `delete_annotation(doc, id)` deletes the entire note shape (all tabs).
 
 On the viewer canvas, multi-tab notes show numbered tab handles above the note. The user can merge notes by dragging one onto another (tabs combine), or detach a tab via right-click.
@@ -249,20 +282,20 @@ The Notes tab in the panel has sort (document order / recency) and filter (all /
 - `delete_annotation(doc, id)` — remove a note (deletes all tabs)
 
 ### Review loop behavior
-When the user explicitly says they're reviewing a document on the iPad — and reviewing is your primary task, not a side activity — enter a listen-respond loop:
-1. Call `wait_for_feedback(doc)` to block for the next annotation
-2. Interpret what came in (pen stroke, highlight, text selection, etc.)
+When the user explicitly says they're reviewing a document on the iPad — and reviewing is your primary task, not a side activity — run `tlda listen <doc>` in a loop:
+1. `tlda listen <doc>` blocks until feedback arrives
+2. Call `read_annotations(doc)` to see what came in (pen stroke, highlight, sticky, text selection, etc.)
 3. Scroll Zed to the relevant source line: `zed /path/to/file.tex:LINE`
 4. Respond — drop a note, reply, answer the question, edit tex, whatever's needed
-5. Call `wait_for_feedback(doc)` again automatically
+5. Loop back to `tlda listen` for the next round
 
 Always keep Zed in sync: whenever you're discussing, highlighting, or responding to a specific source line, scroll Zed there with `zed file.tex:LINE`. This is the default behavior, not something the user should have to ask for.
 
-If the user interrupts with a chat message, handle it, then resume `wait_for_feedback`. Stay in the loop until the user says they're done, or until you get 2 consecutive timeouts (then switch to `tlda monitor`).
+If the user interrupts with a chat message, handle it, then resume `tlda listen`. Stay in the loop until the user says they're done, or until you get repeated timeouts with no feedback (then switch to `tlda monitor`).
 
 **Do NOT enter this loop if:**
 - Your primary task is writing, editing, or analyzing (use `tlda monitor` for background notifications)
-- The manager told you to "monitor" a document (that means `tlda monitor`, not `wait_for_feedback`)
+- The manager told you to "monitor" a document (that means `tlda monitor`, not `tlda listen`)
 - You have a delegated task from the agent manager — do that task, use `tlda monitor` if you also need to watch a doc
 
 ### Diff review workflow
