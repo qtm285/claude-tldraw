@@ -368,6 +368,24 @@ mic → whisper-stream (SDL) → stdout → whisper-bridge.mjs → ws:8179 → b
 
 **Log:** `~/.config/tlda/whisper-bridge.log`
 
+## Playwright Coordination
+
+**Skip's machine cannot handle two concurrent playwright sessions** and every playwright window pops a giant browser on his screen. Before launching playwright, **acquire the lock**:
+
+```bash
+bin/pw-lock.sh acquire <your-agent-name>   # exits 1 if another agent holds it
+# ... your playwright work ...
+bin/pw-lock.sh release <your-agent-name>
+```
+
+`status` prints the current holder; `steal` force-takes the lock if someone left it held (last resort). Locks auto-expire after 10 minutes.
+
+Per `src/main.tsx`, every automated browser (`navigator.webdriver === true`) automatically gets `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. This means:
+- Playwright windows are dark theme (not a white flash on Skip's screen at night)
+- The agent's pan/zoom does NOT broadcast over the camera-link sync to Skip's view
+
+Do not undo either of these.
+
 ## Self-Service Rule
 
 **NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have puppeteer, MCP tools, `tlda preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
