@@ -380,7 +380,7 @@ bin/pw-lock.sh release <your-agent-name>
 
 `status` prints the current holder; `steal` force-takes the lock if someone left it held (last resort). Locks auto-expire after 10 minutes.
 
-Per `src/main.tsx`, every automated browser (`navigator.webdriver === true`) automatically gets `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. This means:
+Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. **Detection: `navigator.webdriver` OR `?pw=1` in the URL.** playwright-mcp hides the webdriver flag, so always include `&pw=1` in playwright URLs. This means:
 - Playwright windows are dark theme (not a white flash on Skip's screen at night)
 - The agent's pan/zoom does NOT broadcast over the camera-link sync to Skip's view
 
