@@ -368,6 +368,21 @@ mic → whisper-stream (SDL) → stdout → whisper-bridge.mjs → ws:8179 → b
 
 **Log:** `~/.config/tlda/whisper-bridge.log`
 
+## Client Logging
+
+**Browser code uses `src/logger.ts`.** Every `log.{debug,info,warn,error}('namespace', 'message', { data })` call:
+
+1. Goes to the browser console (only when the namespace's level beats the console threshold — default `warn`)
+2. **Always** gets POSTed to `/api/log` and appended to `~/.config/tlda/client.log`
+
+So agents can `tail -f ~/.config/tlda/client.log` (or grep it) to see what the browser is doing without needing playwright or the user's DevTools.
+
+The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `session` field is a short per-tab id so you can tell which window logged what.
+
+**Tune the console threshold** via URL `?log=ns:debug` or `localStorage.setItem('tlda-log', 'chat-scroll:debug')`. The server sink captures everything regardless — the threshold only affects what shows in DevTools.
+
+**Use this everywhere.** Don't `console.log` from app code; use `log.debug/info/warn/error` so the event lands in the file. Server-side code uses `shared/logger.mjs` instead, which writes to per-process log files (`server.log`, `fleet-daemon.log`, etc.).
+
 ## Playwright Coordination
 
 **Skip's machine cannot handle two concurrent playwright sessions** and every playwright window pops a giant browser on his screen. Before launching playwright, **acquire the lock**:
