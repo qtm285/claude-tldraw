@@ -339,6 +339,16 @@ When starting a review of a diff document (`format: "diff"` in manifest):
 
 3. **Don't redo decided changes.** When summaries and triage state already exist (from a previous session or earlier in the current one), respect them. Only update summaries if the diff itself changes (reload signal clears both).
 
+### Viewing previous versions — what exists and what does NOT
+
+For a **normal `svg` doc** (e.g. `synth-supplement`), the **only** way to view an earlier version is the **shadow-history scrubber**: click the **version timestamp** in the corner to open a slim time-axis scrubber at the bottom of the canvas (`ShadowHistoryOverlay`), then drag/step to a past build — the old version renders as a "shadow column" beside the current one, fed by `/api/projects/{doc}/history/shadow` off the doc's shadow git repo.
+
+Things that **do NOT exist** — don't reference them to the user or look for them:
+- **No "compare" / "diff" button** on a normal doc. The Blue/Red/Violet Changes-tab diff workflow above exists *only* for docs created with `format: "diff"` (a dedicated diff document) — not for an ordinary `svg` doc.
+- **The doc-view panel is not a version viewer.** The `fleet-docview` panel shows a *region of the current doc*; it has nothing to do with version history.
+
+When the user mentions a "previous version," it's the timestamp→scrubber path. (Known issue to watch for: the shadow column can render page geometry but **no text** if the doc's shadow repo / historical build is incomplete — see the shadow-mirroring notes.)
+
 ### Proof reader
 
 Press `r` to toggle proof reader mode. This highlights proof regions and shows a statement overlay panel (bottom-right) when scrolled to a cross-page proof.
