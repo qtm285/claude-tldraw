@@ -107,6 +107,14 @@ The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props`
 
 **Visual design is deliberately subtle.** UI chrome should be nearly invisible until hovered or needed. Follow the conventions established by existing elements (e.g., `.build-warning-badge`): 10% opacity default, 60% on hover, 0.3s transition. Use CSS classes with `.tl-theme__dark` variants — never hardcode colors inline. New UI elements should look like they belong next to existing ones in size, weight, and opacity.
 
+## Fleet Shape Ownership & Junk Identities
+
+Per-user fleet shapes (`fleet-chat`, `fleet-agents`, `fleet-search`, `fleet-docview`, `fleet-reaper`) and the HUD anchor (`fleet-hud-anchor--<user>`) are scoped by a `userId` prop. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` and `saveAnchorOffsets` bail when `getHumanId()` is falsy rather than stamping `userId:""` / creating a bare anchor, so no-identity sessions can't spawn orphans.
+
+**Incidental, tolerated issue — junk human identities.** The WS `register` handler (`server/unified-server.mjs`) stores whatever `id` the client sends, verbatim. The production identity flow (`registerHuman`) always sends `fleet:<sanitized-name>`, but **test scripts call `register` directly with arbitrary ids** (numeric floats like `2.0`, `7.0`, `261710.0`), creating human-agent rows whose id is not `fleet:`-prefixed. A session that logs in as one of those test names gets the malformed id, and fleet shapes it creates get that id as their `userId`.
+
+This is **fine and tolerated**: because ownership is `uid === getHumanId()`, a shape scoped to a junk id only ever shows in a session holding that same junk id — it never pollutes a real user's (`fleet:skip`, `fleet:dmitry`, …) view. We deliberately do **not** harden `register` to reject non-`fleet:` human ids. If junk rows accumulate in `~/.config/tlda/fleet.db` they can be swept with `DELETE FROM agents WHERE human=1 AND id NOT LIKE 'fleet:%'` (back up the rows first; never touch `fleet:`-prefixed humans).
+
 ## Architecture
 
 ```
@@ -331,6 +339,16 @@ When starting a review of a diff document (`format: "diff"` in manifest):
 
 3. **Don't redo decided changes.** When summaries and triage state already exist (from a previous session or earlier in the current one), respect them. Only update summaries if the diff itself changes (reload signal clears both).
 
+### Viewing previous versions — what exists and what does NOT
+
+For a **normal `svg` doc** (e.g. `synth-supplement`), the **only** way to view an earlier version is the **shadow-history scrubber**: click the **version timestamp** in the corner to open a slim time-axis scrubber at the bottom of the canvas (`ShadowHistoryOverlay`), then drag/step to a past build — the old version renders as a "shadow column" beside the current one, fed by `/api/projects/{doc}/history/shadow` off the doc's shadow git repo.
+
+Things that **do NOT exist** — don't reference them to the user or look for them:
+- **No "compare" / "diff" button** on a normal doc. The Blue/Red/Violet Changes-tab diff workflow above exists *only* for docs created with `format: "diff"` (a dedicated diff document) — not for an ordinary `svg` doc.
+- **The doc-view panel is not a version viewer.** The `fleet-docview` panel shows a *region of the current doc*; it has nothing to do with version history.
+
+When the user mentions a "previous version," it's the timestamp→scrubber path. (Known issue to watch for: the shadow column can render page geometry but **no text** if the doc's shadow repo / historical build is incomplete — see the shadow-mirroring notes.)
+
 ### Proof reader
 
 Press `r` to toggle proof reader mode. This highlights proof regions and shows a statement overlay panel (bottom-right) when scrolled to a cross-page proof.
@@ -400,6 +418,14 @@ Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-
 - The agent's pan/zoom does NOT broadcast over the camera-link sync to Skip's view
 
 Do not undo either of these.
+
+### Deleting shapes from a live room: use `store.remove`, not `deleteShapes`
+
+When removing shapes from a synced room programmatically in a playwright/automated session (e.g. cleaning up orphan/junk shapes), call **`editor.store.remove(['shape:…'])`**, not `editor.deleteShapes([...])`.
+
+Observed during the userless-fleet-shape cleanup (2026-06-01): in an automated session, `editor.deleteShapes([...])` on fleet/anchor shapes tore the page down — the eval returned nothing, `window.__tldraw_editor__` went null afterward, and the delete **never flushed to the server** (the shape was still present after reload). The lower-level `editor.store.remove([...])` deleted the same shapes cleanly, persisted across reload, and left the editor alive. Root cause of the `deleteShapes` teardown is not pinned down — treat this as an observed automation gotcha, not a settled explanation.
+
+Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** removes any shape from the room server-side (no browser needed) and is the most reliable path. (Reminder: never use `POST …/sync/clear` or bulk-delete — see app-development rule 8.)
 
 ## Self-Service Rule
 
