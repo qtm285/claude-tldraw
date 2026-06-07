@@ -7,18 +7,18 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | Task | Command |
 |------|---------|
 | **Start the server** | `tlda server start` |
-| **Start the fleet daemon** | `tlda watch start` (alias: `tlda watch-all start`) |
-| **Open in browser** | `tlda open <name>` |
-| List projects | `tlda list` |
-| Build status | `tlda status <name>` |
-| LaTeX errors | `tlda errors <name>` |
-| Visual check | `tlda preview <name> [page ...]` |
-| Push files manually | `tlda push <name> --dir /path/to/project` |
-| Monitor doc | `tlda monitor add <doc>` (auto-detect feedback via hook) |
-| Block for feedback | `tlda listen <doc>` (one-shot, for idle agents) |
+| **Start the fleet daemon** | `tlda daemon start` |
+| **Open in browser** | `tlda doc open <name>` |
+| List projects | `tlda doc list` |
+| Build status | `tlda doc status <name>` |
+| LaTeX errors | `tlda doc errors <name>` |
+| Visual check | `tlda doc preview <name> [page ...]` |
+| Push files manually | `tlda doc push <name> --dir /path/to/project` |
+| Monitor doc | `tlda doc monitor add <doc>` (auto-detect feedback via hook) |
+| Block for feedback | `tlda doc listen <doc>` (one-shot, for idle agents) |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
-**`tlda watch start`** runs the per-machine **fleet-daemon** (`bin/fleet-daemon.mjs`), which watches every project's source directory AND every Claude Code session JSONL on this machine, pushing events (source changes, activity cards, terminal-user chat) to the tlda server over a single WebSocket. The server tells the daemon what to watch via a `daemon-welcome` message and pushes `projects-updated` when new projects are created — no polling needed. `tlda watch-all start` is an alias for the same command. The daemon also handles tmux RPCs (interrupt, send-key, capture-pane, restart-mcp, kick) routed by `machine_id`.
+**`tlda daemon start`** runs the per-machine **fleet-daemon** (`bin/fleet-daemon.mjs`), which watches every project's source directory AND every Claude Code session JSONL on this machine, pushing events (source changes, activity cards, terminal-user chat) to the tlda server over a single WebSocket. The server tells the daemon what to watch via a `daemon-welcome` message and pushes `projects-updated` when new projects are created — no polling needed. `tlda daemon start` is an alias for the same command. The daemon also handles tmux RPCs (interrupt, send-key, capture-pane, restart-mcp, kick) routed by `machine_id`.
 
 **Never use `tlda build` to work around pipeline issues.** It bypasses change detection and masks bugs. If something isn't rebuilding when it should, fix the pipeline.
 
@@ -32,11 +32,11 @@ tlda supports a `markdown` format for lightweight notes and scratch documents. N
 
 ```bash
 # Create a markdown project
-tlda create my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
+tlda doc create my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
 # --main defaults to the first .md file found in the dir
 
 # The fleet daemon auto-detects .md changes and rebuilds
-tlda watch start
+tlda daemon start
 ```
 
 Math works the same as in LaTeX: `$inline$` and `$$display$$`. KaTeX renders server-side; CSS served from `/katex/`.
@@ -164,7 +164,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 ┌──────────────────┐                 ┌──────────────────────────────┐
 │ Editor (Zed)     │                 │ unified-server.mjs           │
 │     ↓ save       │                 │                              │
-│ tlda watch        │──POST /push───→ │ Project API → Build runner   │
+│ tlda daemon        │──POST /push───→ │ Project API → Build runner   │
 │                  │                 │   latexmk → dvisvgm → etc.  │
 │ Claude Code      │                 │   ↓                          │
 │ └─ MCP (stdio)   │──Yjs WS──────→ │ Yjs sync + signal:reload     │
@@ -214,53 +214,53 @@ Custom macros from the paper's preamble are automatically available (e.g., `$\E[
 When the user asks to review or view a paper (e.g. "let's review this", "review bregman", "pull up the paper"):
 
 1. Make sure the server is running: `tlda server start`
-2. Start the fleet daemon: `tlda watch start`
-3. Open in browser: `tlda open <name>`
+2. Start the fleet daemon: `tlda daemon start`
+3. Open in browser: `tlda doc open <name>`
 
 **If you'll be doing other work while the doc is open** (editing code, running sims, writing), enable background monitoring so feedback appears automatically:
 ```bash
-tlda monitor add <name>
+tlda doc monitor add <name>
 ```
 
 For an **iPad review session** (dedicated to review, not multitasking):
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5176/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
 2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
-3. For a dedicated review session, run `tlda listen <doc>` (blocks until feedback). For background watching while you work, use `tlda monitor add <doc>`.
+3. For a dedicated review session, run `tlda doc listen <doc>` (blocks until feedback). For background watching while you work, use `tlda doc monitor add <doc>`.
 
 ### Listening for feedback
 
 There is no blocking MCP tool for review. Use the CLI:
 
-- **`tlda monitor add <doc>`** — hook-based. Feedback shows up between your tool calls as `[tlda feedback] …`. Right for any agent that's actively working on a task.
-- **`tlda listen <doc>`** — blocking. Right for an idle agent or a script that has nothing to do until feedback arrives. Suitable for `run_in_background`.
+- **`tlda doc monitor add <doc>`** — hook-based. Feedback shows up between your tool calls as `[tlda feedback] …`. Right for any agent that's actively working on a task.
+- **`tlda doc listen <doc>`** — blocking. Right for an idle agent or a script that has nothing to do until feedback arrives. Suitable for `run_in_background`.
 
 When feedback arrives, read the details with `read_annotations(doc)`.
 
 ### Background listening (work + monitor)
 
-When you need to do other work while monitoring a document, use `tlda monitor` to enable automatic feedback detection via a PostToolUse hook:
+When you need to do other work while monitoring a document, use `tlda doc monitor` to enable automatic feedback detection via a PostToolUse hook:
 
 ```bash
-tlda monitor add spinoff3    # start monitoring (uses $AGENT_WIN)
-tlda monitor list            # show what's monitored
-tlda monitor remove spinoff3 # stop
-tlda monitor clear           # stop all
+tlda doc monitor add spinoff3    # start monitoring (uses $AGENT_WIN)
+tlda doc monitor list            # show what's monitored
+tlda doc monitor remove spinoff3 # stop
+tlda doc monitor clear           # stop all
 ```
 
 Monitoring is scoped per agent via `$AGENT_WIN` — each agent has its own watch list and state. If `$AGENT_WIN` isn't set, pass `--id <name>` explicitly.
 
 Once monitoring is active, the hook checks for new annotations, pings, and drawn shapes after every tool call (throttled to every 10s). Feedback appears automatically between tool calls — no polling, no re-launching, no background tasks. Just work normally and feedback shows up as `[tlda feedback] New note on spinoff3: "..."`.
 
-For **idle agents** (nothing to do, waiting for input), use `tlda listen` instead — it blocks until feedback arrives, suitable for `run_in_background`:
+For **idle agents** (nothing to do, waiting for input), use `tlda doc listen` instead — it blocks until feedback arrives, suitable for `run_in_background`:
 
 ```bash
-tlda listen spinoff3 --timeout 600
+tlda doc listen spinoff3 --timeout 600
 ```
 
 **Summary:**
-- **`tlda monitor`** — hook-based, automatic, for agents actively working
-- **`tlda listen`** — blocking CLI, for idle agents or scripts
+- **`tlda doc monitor`** — hook-based, automatic, for agents actively working
+- **`tlda doc listen`** — blocking CLI, for idle agents or scripts
 
 ### Reading annotations
 - `read_annotations(doc)` — all annotations: math notes, highlighter strokes, pen strokes, arrows, geo, text. Source-line anchored. Filter by `type`, `since`, `startLine`/`endLine`, `unaddressed_only`. Sort by `document` (default) or `time`.
@@ -290,21 +290,21 @@ The Notes tab in the panel has sort (document order / recency) and filter (all /
 - `delete_annotation(doc, id)` — remove a note (deletes all tabs)
 
 ### Review loop behavior
-When the user explicitly says they're reviewing a document on the iPad — and reviewing is your primary task, not a side activity — run `tlda listen <doc>` in a loop:
-1. `tlda listen <doc>` blocks until feedback arrives
+When the user explicitly says they're reviewing a document on the iPad — and reviewing is your primary task, not a side activity — run `tlda doc listen <doc>` in a loop:
+1. `tlda doc listen <doc>` blocks until feedback arrives
 2. Call `read_annotations(doc)` to see what came in (pen stroke, highlight, sticky, text selection, etc.)
 3. Scroll Zed to the relevant source line: `zed /path/to/file.tex:LINE`
 4. Respond — drop a note, reply, answer the question, edit tex, whatever's needed
-5. Loop back to `tlda listen` for the next round
+5. Loop back to `tlda doc listen` for the next round
 
 Always keep Zed in sync: whenever you're discussing, highlighting, or responding to a specific source line, scroll Zed there with `zed file.tex:LINE`. This is the default behavior, not something the user should have to ask for.
 
-If the user interrupts with a chat message, handle it, then resume `tlda listen`. Stay in the loop until the user says they're done, or until you get repeated timeouts with no feedback (then switch to `tlda monitor`).
+If the user interrupts with a chat message, handle it, then resume `tlda doc listen`. Stay in the loop until the user says they're done, or until you get repeated timeouts with no feedback (then switch to `tlda doc monitor`).
 
 **Do NOT enter this loop if:**
-- Your primary task is writing, editing, or analyzing (use `tlda monitor` for background notifications)
-- The manager told you to "monitor" a document (that means `tlda monitor`, not `tlda listen`)
-- You have a delegated task from the agent manager — do that task, use `tlda monitor` if you also need to watch a doc
+- Your primary task is writing, editing, or analyzing (use `tlda doc monitor` for background notifications)
+- The manager told you to "monitor" a document (that means `tlda doc monitor`, not `tlda doc listen`)
+- You have a delegated task from the agent manager — do that task, use `tlda doc monitor` if you also need to watch a doc
 
 ### Diff review workflow
 
@@ -431,7 +431,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 ## Self-Service Rule
 
-**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, `tlda preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
+**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, `tlda doc preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
 
 **Verify before declaring success.** After deploying changes (server restart, SPA rebuild, viewer fix), open the viewer with `tlda-dev pw` and confirm it actually works. Don't guess at CSS fixes — load the page and look.
 
@@ -443,7 +443,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
-**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests). `tlda preview` renders static SVGs — it can't diagnose viewer runtime issues like blank pages, broken WebSocket, or CSS problems.
+**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests). `tlda doc preview` renders static SVGs — it can't diagnose viewer runtime issues like blank pages, broken WebSocket, or CSS problems.
 
 **If headless can't verify it, go headed.** If iframes, canvas rendering, or animations don't work in headless playwright, launch headed (`headless: false`), take screenshots at each step, and read them yourself. Don't punt to the user because your default verification tool has limits.
 
