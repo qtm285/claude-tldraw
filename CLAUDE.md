@@ -14,8 +14,6 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | LaTeX errors | `tlda doc errors <name>` |
 | Visual check | `tlda doc preview <name> [page ...]` |
 | Push files manually | `tlda doc push <name> --dir /path/to/project` |
-| Monitor doc | `tlda doc monitor add <doc>` (auto-detect feedback via hook) |
-| Block for feedback | `tlda doc listen <doc>` (one-shot, for idle agents) |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
 **`tlda daemon start`** runs the per-machine **fleet-daemon** (`bin/fleet-daemon.mjs`), which watches every project's source directory AND every Claude Code session JSONL on this machine, pushing events (source changes, activity cards, terminal-user chat) to the tlda server over a single WebSocket. The server tells the daemon what to watch via a `daemon-welcome` message and pushes `projects-updated` when new projects are created — no polling needed. `tlda daemon start` is an alias for the same command. The daemon also handles tmux RPCs (interrupt, send-key, capture-pane, restart-mcp, kick) routed by `machine_id`.
@@ -217,50 +215,17 @@ When the user asks to review or view a paper (e.g. "let's review this", "review 
 2. Start the fleet daemon: `tlda daemon start`
 3. Open in browser: `tlda doc open <name>`
 
-**If you'll be doing other work while the doc is open** (editing code, running sims, writing), enable background monitoring so feedback appears automatically:
-```bash
-tlda doc monitor add <name>
-```
+**If you'll be doing other work while the doc is open** (editing code, running sims, writing), subscribe to feedback with the **`monitor_add`** MCP tool — new annotations arrive as fleet chat from `fleet:tlda`, the same channel as any other message.
 
 For an **iPad review session** (dedicated to review, not multitasking):
 1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5176/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
 2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
-3. For a dedicated review session, run `tlda doc listen <doc>` (blocks until feedback). For background watching while you work, use `tlda doc monitor add <doc>`.
+3. Subscribe with `monitor_add(doc)` so feedback reaches you on the channel.
 
 ### Listening for feedback
 
-There is no blocking MCP tool for review. Use the CLI:
-
-- **`tlda doc monitor add <doc>`** — hook-based. Feedback shows up between your tool calls as `[tlda feedback] …`. Right for any agent that's actively working on a task.
-- **`tlda doc listen <doc>`** — blocking. Right for an idle agent or a script that has nothing to do until feedback arrives. Suitable for `run_in_background`.
-
-When feedback arrives, read the details with `read_annotations(doc)`.
-
-### Background listening (work + monitor)
-
-When you need to do other work while monitoring a document, use `tlda doc monitor` to enable automatic feedback detection via a PostToolUse hook:
-
-```bash
-tlda doc monitor add spinoff3    # start monitoring (uses $AGENT_WIN)
-tlda doc monitor list            # show what's monitored
-tlda doc monitor remove spinoff3 # stop
-tlda doc monitor clear           # stop all
-```
-
-Monitoring is scoped per agent via `$AGENT_WIN` — each agent has its own watch list and state. If `$AGENT_WIN` isn't set, pass `--id <name>` explicitly.
-
-Once monitoring is active, the hook checks for new annotations, pings, and drawn shapes after every tool call (throttled to every 10s). Feedback appears automatically between tool calls — no polling, no re-launching, no background tasks. Just work normally and feedback shows up as `[tlda feedback] New note on spinoff3: "..."`.
-
-For **idle agents** (nothing to do, waiting for input), use `tlda doc listen` instead — it blocks until feedback arrives, suitable for `run_in_background`:
-
-```bash
-tlda doc listen spinoff3 --timeout 600
-```
-
-**Summary:**
-- **`tlda doc monitor`** — hook-based, automatic, for agents actively working
-- **`tlda doc listen`** — blocking CLI, for idle agents or scripts
+Use the **`monitor_add` / `monitor_remove` / `monitor_list` MCP tools**. `monitor_add(doc)` subscribes you to a document; new annotations, pings, and drawn shapes arrive as **fleet chat from `fleet:tlda`** — no hook, no polling, and it reaches you whether you're busy or idle (the channel works either way). When feedback arrives, read the details with `read_annotations(doc)`.
 
 ### Reading annotations
 - `read_annotations(doc)` — all annotations: math notes, highlighter strokes, pen strokes, arrows, geo, text. Source-line anchored. Filter by `type`, `since`, `startLine`/`endLine`, `unaddressed_only`. Sort by `document` (default) or `time`.
@@ -290,21 +255,15 @@ The Notes tab in the panel has sort (document order / recency) and filter (all /
 - `delete_annotation(doc, id)` — remove a note (deletes all tabs)
 
 ### Review loop behavior
-When the user explicitly says they're reviewing a document on the iPad — and reviewing is your primary task, not a side activity — run `tlda doc listen <doc>` in a loop:
-1. `tlda doc listen <doc>` blocks until feedback arrives
-2. Call `read_annotations(doc)` to see what came in (pen stroke, highlight, sticky, text selection, etc.)
+When the user explicitly says they're reviewing a document with you — and reviewing is your primary task — subscribe with `monitor_add(doc)` and respond to feedback as it arrives on the channel:
+1. `monitor_add(doc)` — feedback (pen stroke, highlight, sticky, text selection, …) arrives as fleet chat from `fleet:tlda`.
+2. Call `read_annotations(doc)` to see the details of what came in.
 3. Scroll Zed to the relevant source line: `zed /path/to/file.tex:LINE`
-4. Respond — drop a note, reply, answer the question, edit tex, whatever's needed
-5. Loop back to `tlda doc listen` for the next round
+4. Respond — drop a note, reply, answer the question, edit tex, whatever's needed.
 
 Always keep Zed in sync: whenever you're discussing, highlighting, or responding to a specific source line, scroll Zed there with `zed file.tex:LINE`. This is the default behavior, not something the user should have to ask for.
 
-If the user interrupts with a chat message, handle it, then resume `tlda doc listen`. Stay in the loop until the user says they're done, or until you get repeated timeouts with no feedback (then switch to `tlda doc monitor`).
-
-**Do NOT enter this loop if:**
-- Your primary task is writing, editing, or analyzing (use `tlda doc monitor` for background notifications)
-- The manager told you to "monitor" a document (that means `tlda doc monitor`, not `tlda doc listen`)
-- You have a delegated task from the agent manager — do that task, use `tlda doc monitor` if you also need to watch a doc
+You don't "block and wait" — feedback reaches you on the channel whether you're mid-task or idle, so just keep working and handle it when it arrives. `monitor_remove(doc)` when you're done.
 
 ### Diff review workflow
 
