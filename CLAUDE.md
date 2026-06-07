@@ -403,17 +403,19 @@ The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `sessi
 
 ## Playwright Coordination
 
-**Skip's machine cannot handle two concurrent playwright sessions** and every playwright window pops a giant browser on his screen. Before launching playwright, **acquire the lock**:
+**Drive the browser with `tlda-dev pw` — one shared browser, never your own session.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a single persistent session that pops up lazily and persists across calls (so it stops "closing between commands"). You never `open`/`close` and never pick a `-s=` session — that per-agent lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
 
 ```bash
-bin/pw-lock.sh acquire <your-agent-name>   # exits 1 if another agent holds it
-# ... your playwright work ...
-bin/pw-lock.sh release <your-agent-name>
+tlda-dev pw acquire                 # take the lock + pop the shared browser (lazy)
+tlda-dev pw goto "URL" ; tlda-dev pw click <ref> ; tlda-dev pw screenshot --filename f ; tlda-dev pw eval "() => expr"
+tlda-dev pw status                  # lock holder + browser up/down + URL
+tlda-dev pw release                 # give up the lock (browser stays up for the next agent)
+tlda-dev pw reap                    # close the shared browser (the reaper)
 ```
 
-`status` prints the current holder; `steal` force-takes the lock if someone left it held (last resort). Locks auto-expire after 10 minutes.
+The lock is the existing `bin/pw-lock.sh` (auto-expires after 10 min; `tlda-dev pw status` shows the holder; `bin/pw-lock.sh steal <you>` to force-take as a last resort). The first forwarded `tlda-dev pw` verb auto-acquires it. **Skip's machine still can't handle two concurrent playwright sessions** — that's exactly why there's one shared browser behind a lock.
 
-Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. **Detection: `navigator.webdriver` OR `?pw=1` in the URL.** playwright-mcp hides the webdriver flag, so always include `&pw=1` in playwright URLs. This means:
+Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. **Detection: `navigator.webdriver` OR `?pw=1` in the URL.** Always include `&pw=1` in your `tlda-dev pw goto` URLs. This means:
 - Playwright windows are dark theme (not a white flash on Skip's screen at night)
 - The agent's pan/zoom does NOT broadcast over the camera-link sync to Skip's view
 
@@ -429,23 +431,19 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 ## Self-Service Rule
 
-**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have puppeteer, MCP tools, `tlda preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
+**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, `tlda preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
 
-**Verify before declaring success.** After deploying changes (server restart, SPA rebuild, viewer fix), open the viewer in playwright/puppeteer and confirm it actually works. Don't guess at CSS fixes — load the page and look.
+**Verify before declaring success.** After deploying changes (server restart, SPA rebuild, viewer fix), open the viewer with `tlda-dev pw` and confirm it actually works. Don't guess at CSS fixes — load the page and look.
 
 **Look at layout, not just functionality.** When taking verification screenshots, actually examine proportions, spacing, and visual balance — don't just confirm that elements exist and render. A sidebar that's 80/20 instead of 50/50, text crammed into a sliver, an overlay that's misaligned by 100px — these are obvious to a human glancing at the screenshot. Check: Are columns balanced? Does text have room to breathe? Are things where they should be relative to each other? If you changed something that affects sizing or positioning, measure the actual computed values (grid columns, bounding rects, offsets) rather than eyeballing.
 
-**Test in WebKit.** The user views on Safari/iPad. If you can't reproduce a reported problem, test in WebKit — Chromium passing doesn't mean Safari passes. Playwright supports WebKit: `playwright.webkit.launch()`.
+**Chromium is the default; WebKit is usually a waste of time.** Don't routinely re-run in WebKit — only reach for it when you have a *concrete, reproduced* Safari-specific bug to chase (e.g. a behavior Skip reports on iPad/Safari that you can't reproduce in Chromium). Routine "let me also check WebKit" passes burn time for no signal.
 
-**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari http://localhost:5176/?doc=NAME` or use playwright to open a fresh page. A new tab has no cache to worry about.
+**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari http://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
 
-**Don't claim it'll work in Safari without justification.** If WebKit playwright fails, don't assert "that's just a playwright quirk, real Safari will be fine" unless you have a concrete reason. That's punting with extra steps.
+**When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
-If something works in Chromium but fails in WebKit playwright, and you genuinely believe it's a playwright-specific issue: explain why (e.g. known TDZ bug in minified bundles under strict mode). If you can't explain it, don't claim it.
-
-If a bug isn't reproducible in playwright: try both Chromium and WebKit to narrow it down. If still not reproducible after trying both, you can involve the user — but set it up first: open the page, use MCP tools to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
-
-**Debug with live tools.** When something is visually broken in the viewer, use playwright/puppeteer to inspect the live page (console errors, DOM state, network requests). `tlda preview` renders static SVGs — it can't diagnose viewer runtime issues like blank pages, broken WebSocket, or CSS problems.
+**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests). `tlda preview` renders static SVGs — it can't diagnose viewer runtime issues like blank pages, broken WebSocket, or CSS problems.
 
 **If headless can't verify it, go headed.** If iframes, canvas rendering, or animations don't work in headless playwright, launch headed (`headless: false`), take screenshots at each step, and read them yourself. Don't punt to the user because your default verification tool has limits.
 
