@@ -362,6 +362,8 @@ The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `sessi
 
 ## Playwright Coordination
 
+**Stuck testing the app? Tell the `app-testing` agent — don't flail.** Playwright problems, dev-server issues, login/auth snags, or anything else blocking you from driving the app to test a change: don't burn time fighting the harness. Message the agent named `app-testing`; that's their domain.
+
 **Drive the browser with `tlda-dev pw` — one shared browser, never your own session.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a single persistent session that pops up lazily and persists across calls (so it stops "closing between commands"). You never `open`/`close` and never pick a `-s=` session — that per-agent lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
 
 ```bash
