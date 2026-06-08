@@ -171,7 +171,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Server URL resolution:** `TLDA_SERVER` env → `--server` flag → `~/.config/tlda/config.json` → `http://localhost:5176`
+**Server URL resolution:** `TLDA_SERVER` env → `--server` flag → `~/.config/tlda/config.json` → `<proto>://localhost:5176`, where `<proto>` is **`https`** when the mkcert TLS certs exist (`~/.config/tlda/localhost+2.pem`) and `http` otherwise. On this machine the certs are present, so the server is **https-only** — use `https://localhost:5176`. A plaintext `http://localhost:5176` request to the TLS port returns an empty reply / `HTTP/0.9` garbage; that is **not** an outage, it's the wrong scheme. `getServerUrl()` in `shared/config.mjs` already picks the right scheme automatically, so don't hardcode `http://` anywhere.
 
 **Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running the triage agent against the published version.
 
@@ -400,7 +400,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 **Chromium is the default; WebKit is usually a waste of time.** Don't routinely re-run in WebKit — only reach for it when you have a *concrete, reproduced* Safari-specific bug to chase (e.g. a behavior Skip reports on iPad/Safari that you can't reproduce in Chromium). Routine "let me also check WebKit" passes burn time for no signal.
 
-**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari http://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
+**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari https://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
