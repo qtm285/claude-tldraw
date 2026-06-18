@@ -222,7 +222,7 @@ When the user asks to review or view a paper (e.g. "let's review this", "review 
 **If you'll be doing other work while the doc is open** (editing code, running sims, writing), subscribe to feedback with the **`monitor_add`** MCP tool — new annotations arrive as fleet chat from `fleet:tlda`, the same channel as any other message.
 
 For an **iPad review session** (dedicated to review, not multitasking):
-1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5176/?doc=DOC', {small: true}))"`
+1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('https://IP:5176/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
 2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
 3. Subscribe with `monitor_add(doc)` so feedback reaches you on the channel.
@@ -281,7 +281,7 @@ When starting a review of a diff document (`format: "diff"` in manifest):
      ```bash
      node -e "
      import WebSocket from 'ws'; import * as Y from 'yjs';
-     const doc = new Y.Doc(); const ws = new WebSocket('ws://localhost:5176/DOC');
+     const doc = new Y.Doc(); const ws = new WebSocket('wss://localhost:5176/DOC');
      ws.on('message', d => Y.applyUpdate(doc, new Uint8Array(d)));
      setTimeout(() => {
        const m = doc.getMap('records');
