@@ -175,7 +175,11 @@ Author's machine                     Server (localhost or remote, port 5176)
 
 **Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running the triage agent against the published version.
 
-### Publishing and the triage agent
+### Live deploy and old publishing machinery
+
+The current `phi`/Fly live deploy path is documented in `docs/live-deploy.md`.
+Use `fly deploy -c fly.live.toml` after rebuilding the SPA. Do not use
+`tlda publish` for the live server; that is old snapshot/GitHub Pages machinery.
 
 `npm run publish-snapshot -- <doc>` syncs the working copy to `~/work/published/tlda/`, builds the viewer, and deploys to GitHub Pages + Fly. The published clone is a frozen snapshot — safe for the triage agent to read from while the working copy keeps changing.
 
