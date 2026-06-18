@@ -107,6 +107,30 @@ The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props`
 
 When adding a UI control inside existing chrome, inspect the neighboring controls first and match their layout behavior and visual weight. Do not introduce a boxed button, reserve new text space, or push nearby content unless the adjacent controls do the same.
 
+## Fleet Chat Artifact Contract
+
+Local file paths mentioned in fleet chat are supposed to be resolved, uploaded to
+the fleet server, and rewritten into server-visible links. Images should render
+inline; non-images should become attachment chips. Sending a bare local path such
+as `/tmp/foo.png` or a server `/api/file?path=/tmp/foo.png` link that only works
+on the sender's filesystem is a bug or a misuse of the chat path, not acceptable
+evidence.
+
+When showing visual proof to a user:
+- Use the fleet chat path or `/api/upload` so the artifact is on the server.
+- Verify the resulting URL returns `200` and the expected content type before
+  sending it.
+- Prefer an inline image message for screenshots.
+- Do not ask the user to trust a local path or an agent-only file.
+
+When debugging a user-visible failure, the browser-visible behavior is the
+contract. Database rows, logs, and DOM counts are useful diagnostics, but they do
+not by themselves prove the user's experience is fixed. If the user reports that
+a feature is not visible or not usable, treat that as the current production
+failure until a browser check demonstrates the exact behavior the user needs.
+
+Detailed contract: `docs/fleet-chat-artifacts.md`.
+
 ## Fleet Shape Ownership & Junk Identities
 
 Per-device fleet shapes (`fleet-chat`, `fleet-agents`, `fleet-search`, `fleet-docview`, `fleet-reaper`, `fleet-inbox`, `fleet-touch-inbox`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`) are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` and `saveAnchorOffsets` bail when identity/device is unresolved rather than stamping empty ownership fields or creating a bare/global anchor, so no-identity sessions can't spawn orphans.
