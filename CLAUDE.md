@@ -1,4 +1,5 @@
 # tlda - Paper Review & Annotation System
+**No backward compatibility.** Do not keep deprecated aliases, compatibility shims, or old command paths unless Skip explicitly asks for them.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
 
@@ -29,8 +30,8 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 tlda supports a `markdown` format for lightweight notes and scratch documents. No LaTeX build pipeline — the server renders the `.md` file with markdown-it + KaTeX and serves it as an HTML iframe page.
 
 ```bash
-# Create a markdown project
-tlda doc create my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
+# Link a markdown project
+tlda doc link my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
 # --main defaults to the first .md file found in the dir
 
 # The fleet daemon auto-detects .md changes and rebuilds
