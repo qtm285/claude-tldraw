@@ -1,4 +1,5 @@
 # tlda - Paper Review & Annotation System
+**No backward compatibility.** Do not keep deprecated aliases, compatibility shims, or old command paths unless Skip explicitly asks for them.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
 
@@ -29,8 +30,8 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 tlda supports a `markdown` format for lightweight notes and scratch documents. No LaTeX build pipeline — the server renders the `.md` file with markdown-it + KaTeX and serves it as an HTML iframe page.
 
 ```bash
-# Create a markdown project
-tlda doc create my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
+# Link a markdown project
+tlda doc link my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
 # --main defaults to the first .md file found in the dir
 
 # The fleet daemon auto-detects .md changes and rebuilds
@@ -105,9 +106,39 @@ The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props`
 
 **Visual design is deliberately subtle.** UI chrome should be nearly invisible until hovered or needed. Follow the conventions established by existing elements (e.g., `.build-warning-badge`): 10% opacity default, 60% on hover, 0.3s transition. Use CSS classes with `.tl-theme__dark` variants — never hardcode colors inline. New UI elements should look like they belong next to existing ones in size, weight, and opacity.
 
+When adding a UI control inside existing chrome, inspect the neighboring controls first and match their layout behavior and visual weight. Do not introduce a boxed button, reserve new text space, or push nearby content unless the adjacent controls do the same.
+
+## Fleet Chat Artifact Contract
+
+Local file paths mentioned in fleet chat are supposed to be resolved, uploaded to
+the fleet server, and rewritten into server-visible links. Images should render
+inline; non-images should become attachment chips. Sending a bare local path such
+as `/tmp/foo.png` or a server `/api/file?path=/tmp/foo.png` link that only works
+on the sender's filesystem is a bug or a misuse of the chat path, not acceptable
+evidence.
+
+When showing visual proof to a user:
+- Use the fleet chat path or `/api/upload` so the artifact is on the server.
+- Verify the resulting URL returns `200` and the expected content type before
+  sending it.
+- Prefer an inline image message for screenshots.
+- Do not ask the user to trust a local path or an agent-only file.
+
+When debugging a user-visible failure, the browser-visible behavior is the
+contract. Database rows, logs, and DOM counts are useful diagnostics, but they do
+not by themselves prove the user's experience is fixed. If the user reports that
+a feature is not visible or not usable, treat that as the current production
+failure until a browser check demonstrates the exact behavior the user needs.
+
+Detailed contract: `docs/fleet-chat-artifacts.md`.
+
 ## Fleet Shape Ownership & Junk Identities
 
-Per-user fleet shapes (`fleet-chat`, `fleet-agents`, `fleet-search`, `fleet-docview`, `fleet-reaper`) and the HUD anchor (`fleet-hud-anchor--<user>`) are scoped by a `userId` prop. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` and `saveAnchorOffsets` bail when `getHumanId()` is falsy rather than stamping `userId:""` / creating a bare anchor, so no-identity sessions can't spawn orphans.
+Per-device fleet shapes (`fleet-chat`, `fleet-agents`, `fleet-search`, `fleet-docview`, `fleet-reaper`, `fleet-inbox`, `fleet-touch-inbox`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`) are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` and `saveAnchorOffsets` bail when identity/device is unresolved rather than stamping empty ownership fields or creating a bare/global anchor, so no-identity sessions can't spawn orphans.
+
+Browser/UI tests that create fleet shapes in a real document room must clean up every shape and anchor they create before exiting. Do not leave test identities, alien-device shapes, or generated fleet layouts in shared rooms like `bregman`; persisted room pollution makes real review sessions look like multiple layouts are fighting each other.
+
+**Phone fleet layout sizing.** The phone default layout is page-relative: the **chat panel itself** must be the same on-screen width and height as the selected rendered document page. The agents/inbox column sits to the left of that page-sized chat and may be offscreen when the user pans left; it is not included in the page-sized measurement. Do not "fix" phone layout by making the combined agents+inbox+chat footprint equal to a page — that violates the intended geometry.
 
 **Incidental, tolerated issue — junk human identities.** The WS `register` handler (`server/unified-server.mjs`) stores whatever `id` the client sends, verbatim. The production identity flow (`registerHuman`) always sends `fleet:<sanitized-name>`, but **test scripts call `register` directly with arbitrary ids** (numeric floats like `2.0`, `7.0`, `261710.0`), creating human-agent rows whose id is not `fleet:`-prefixed. A session that logs in as one of those test names gets the malformed id, and fleet shapes it creates get that id as their `userId`.
 
@@ -171,21 +202,25 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Server URL resolution:** `TLDA_SERVER` env → `--server` flag → `~/.config/tlda/config.json` → `http://localhost:5176`
+**Server URL resolution:** `TLDA_SERVER` env → `--server` flag → `~/.config/tlda/config.json` → `<proto>://localhost:5176`, where `<proto>` is **`https`** when the mkcert TLS certs exist (`~/.config/tlda/localhost+2.pem`) and `http` otherwise. On this machine the certs are present, so the server is **https-only** — use `https://localhost:5176`. A plaintext `http://localhost:5176` request to the TLS port returns an empty reply / `HTTP/0.9` garbage; that is **not** an outage, it's the wrong scheme. `getServerUrl()` in `shared/config.mjs` already picks the right scheme automatically, so don't hardcode `http://` anywhere.
 
-**Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running Todd against the published version.
+**Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running the triage agent against the published version.
 
-### Publishing and Todd
+### Live deploy and old publishing machinery
 
-`npm run publish-snapshot -- <doc>` syncs the working copy to `~/work/published/tlda/`, builds the viewer, and deploys to GitHub Pages + Fly. The published clone is a frozen snapshot — safe for Todd to read from while the working copy keeps changing.
+The current `phi`/Fly live deploy path is documented in `docs/live-deploy.md`.
+Use `fly deploy -c fly.live.toml` after rebuilding the SPA. Do not use
+`tlda publish` for the live server; that is old snapshot/GitHub Pages machinery.
 
-To run Todd against the published version:
+`npm run publish-snapshot -- <doc>` syncs the working copy to `~/work/published/tlda/`, builds the viewer, and deploys to GitHub Pages + Fly. The published clone is a frozen snapshot — safe for the triage agent to read from while the working copy keeps changing.
+
+To run the triage agent against the published version:
 ```bash
 cd ~/work/published/tlda
 TLDA_SYNC_SERVER=https://tldraw-sync-skip.fly.dev node cli/lib/triage-agent.mjs
 ```
 
-Todd reads doc assets (lookup tables, macros, page data) from the published clone on disk. Shapes and signals sync through Fly — the same room students are connected to.
+The triage agent reads doc assets (lookup tables, macros, page data) from the published clone on disk. Shapes and signals sync through Fly — the same room students are connected to.
 
 ### For viewer development only
 
@@ -218,7 +253,7 @@ When the user asks to review or view a paper (e.g. "let's review this", "review 
 **If you'll be doing other work while the doc is open** (editing code, running sims, writing), subscribe to feedback with the **`monitor_add`** MCP tool — new annotations arrive as fleet chat from `fleet:tlda`, the same channel as any other message.
 
 For an **iPad review session** (dedicated to review, not multitasking):
-1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('http://IP:5176/?doc=DOC', {small: true}))"`
+1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('https://IP:5176/?doc=DOC', {small: true}))"`
    - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
 2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
 3. Subscribe with `monitor_add(doc)` so feedback reaches you on the channel.
@@ -277,7 +312,7 @@ When starting a review of a diff document (`format: "diff"` in manifest):
      ```bash
      node -e "
      import WebSocket from 'ws'; import * as Y from 'yjs';
-     const doc = new Y.Doc(); const ws = new WebSocket('ws://localhost:5176/DOC');
+     const doc = new Y.Doc(); const ws = new WebSocket('wss://localhost:5176/DOC');
      ws.on('message', d => Y.applyUpdate(doc, new Uint8Array(d)));
      setTimeout(() => {
        const m = doc.getMap('records');
@@ -362,6 +397,8 @@ The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `sessi
 
 ## Playwright Coordination
 
+**Stuck testing the app? Tell the `app-testing` agent — don't flail.** Playwright problems, dev-server issues, login/auth snags, or anything else blocking you from driving the app to test a change: don't burn time fighting the harness. Message the agent named `app-testing`; that's their domain.
+
 **Drive the browser with `tlda-dev pw` — one shared browser, never your own session.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a single persistent session that pops up lazily and persists across calls (so it stops "closing between commands"). You never `open`/`close` and never pick a `-s=` session — that per-agent lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
 
 ```bash
@@ -398,7 +435,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 **Chromium is the default; WebKit is usually a waste of time.** Don't routinely re-run in WebKit — only reach for it when you have a *concrete, reproduced* Safari-specific bug to chase (e.g. a behavior Skip reports on iPad/Safari that you can't reproduce in Chromium). Routine "let me also check WebKit" passes burn time for no signal.
 
-**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari http://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
+**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari https://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
