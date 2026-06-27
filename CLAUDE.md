@@ -205,6 +205,16 @@ Author's machine                     Server (localhost or remote, port 5176)
 
 **Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running the triage agent against the published version.
 
+**Testing against an alternate server — use `--config`, never edit `defaultConfig`.** `~/.config/tlda/config.json` holds a `configs` map of named complete configs (each a `{ database, store, licenseKey }` pair = one server) and a `defaultConfig` naming the active one. `defaultConfig` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate config for that run only:
+
+```bash
+tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
+TLDA_CONFIG=wmtry tlda agent spawn …     # env form, same effect
+tlda daemon start --config wmtry         # the daemon + every agent it spawns target wmtry
+```
+
+The config **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `defaultConfig` to test an alternate server**: that's the 6/27 failure — a stray `defaultConfig: "wmtip"` (a WM-test leftover) routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. Two guards now make that loud instead of silent: any process whose explicit `TLDA_SERVER` disagrees with its active config **throws at startup** (`assertServerCoherence` in `shared/config.mjs`), and the running daemon **exits (→ launchd relaunch)** if `config.json` is edited so its active config no longer matches the origin it's connected to.
+
 ### Live deploy and old publishing machinery
 
 The current `phi`/Fly live deploy path is documented in `docs/live-deploy.md`.
