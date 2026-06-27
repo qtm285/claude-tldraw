@@ -13,7 +13,6 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | List projects | `tlda doc list` |
 | Build status | `tlda doc status <name>` |
 | LaTeX errors | `tlda doc errors <name>` |
-| Visual check | `tlda doc preview <name> [page ...]` |
 | Push files manually | `tlda doc push <name> --dir /path/to/project` |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
@@ -205,6 +204,16 @@ Author's machine                     Server (localhost or remote, port 5176)
 **Server URL resolution:** `TLDA_SERVER` env → `--server` flag → `~/.config/tlda/config.json` → `<proto>://localhost:5176`, where `<proto>` is **`https`** when the mkcert TLS certs exist (`~/.config/tlda/localhost+2.pem`) and `http` otherwise. On this machine the certs are present, so the server is **https-only** — use `https://localhost:5176`. A plaintext `http://localhost:5176` request to the TLS port returns an empty reply / `HTTP/0.9` garbage; that is **not** an outage, it's the wrong scheme. `getServerUrl()` in `shared/config.mjs` already picks the right scheme automatically, so don't hardcode `http://` anywhere.
 
 **Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running the triage agent against the published version.
+
+**Testing against an alternate server — use `--config`, never edit `defaultConfig`.** `~/.config/tlda/config.json` holds a `configs` map of named complete configs (each a `{ database, store, licenseKey }` pair = one server) and a `defaultConfig` naming the active one. `defaultConfig` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate config for that run only:
+
+```bash
+tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
+TLDA_CONFIG=wmtry tlda agent spawn …     # env form, same effect
+tlda daemon start --config wmtry         # the daemon + every agent it spawns target wmtry
+```
+
+The config **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `defaultConfig` to test an alternate server**: that's the 6/27 failure — a stray `defaultConfig: "wmtip"` (a WM-test leftover) routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. Two guards now make that loud instead of silent: any process whose explicit `TLDA_SERVER` disagrees with its active config **throws at startup** (`assertServerCoherence` in `shared/config.mjs`), and the running daemon **exits (→ launchd relaunch)** if `config.json` is edited so its active config no longer matches the origin it's connected to.
 
 ### Live deploy and old publishing machinery
 
@@ -427,7 +436,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 ## Self-Service Rule
 
-**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, `tlda doc preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
+**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
 
 **Verify before declaring success.** After deploying changes (server restart, SPA rebuild, viewer fix), open the viewer with `tlda-dev pw` and confirm it actually works. Don't guess at CSS fixes — load the page and look.
 
@@ -439,7 +448,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
-**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests). `tlda doc preview` renders static SVGs — it can't diagnose viewer runtime issues like blank pages, broken WebSocket, or CSS problems.
+**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests).
 
 **If headless can't verify it, go headed.** If iframes, canvas rendering, or animations don't work in headless playwright, launch headed (`headless: false`), take screenshots at each step, and read them yourself. Don't punt to the user because your default verification tool has limits.
 
