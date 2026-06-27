@@ -13,7 +13,6 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 | List projects | `tlda doc list` |
 | Build status | `tlda doc status <name>` |
 | LaTeX errors | `tlda doc errors <name>` |
-| Visual check | `tlda doc preview <name> [page ...]` |
 | Push files manually | `tlda doc push <name> --dir /path/to/project` |
 | Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
@@ -427,7 +426,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 ## Self-Service Rule
 
-**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, `tlda doc preview`, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
+**NEVER tell the user to check something.** Do not say "reload and check," "try it on the iPad," "go verify," "see if that works," or any variant. You have `tlda-dev pw` (the shared browser), the tlda MCP tools, and screenshots. Use them. If you can't verify it yourself, say so explicitly — don't punt to the user.
 
 **Verify before declaring success.** After deploying changes (server restart, SPA rebuild, viewer fix), open the viewer with `tlda-dev pw` and confirm it actually works. Don't guess at CSS fixes — load the page and look.
 
@@ -439,7 +438,7 @@ Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** 
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
-**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests). `tlda doc preview` renders static SVGs — it can't diagnose viewer runtime issues like blank pages, broken WebSocket, or CSS problems.
+**Debug with live tools.** When something is visually broken in the viewer, use `tlda-dev pw` to inspect the live page (console errors, DOM state, network requests).
 
 **If headless can't verify it, go headed.** If iframes, canvas rendering, or animations don't work in headless playwright, launch headed (`headless: false`), take screenshots at each step, and read them yourself. Don't punt to the user because your default verification tool has limits.
 
