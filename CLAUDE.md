@@ -43,6 +43,8 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 
 ## Not a Keyboard App
 
+**tlda is a tool for mathematicians who do math and don't write software.** Do not impose software-developer preferences on it. Most software like this is built by and for developers; this audience is the opposite — they use voice and touch (the primary user has RSI), they read and annotate math, they don't want keyboard-centric affordances, dense developer chrome, capability/permission systems, or loud notifications. When you make a design or UX decision, default to what serves a non-coding mathematician, not what a developer would prefer. Agents consistently default to developer-centric design — that default is the bug.
+
 **This is a voice-and-touch-first application.** Do not propose keyboard shortcuts as primary access points for features. The primary user has RSI and uses voice input and iPad touch — keybindings are inaccessible. When designing UI access patterns, use toolbar buttons, touch targets, or voice commands. A keybinding may exist as a secondary path but never as the primary or only trigger.
 
 ## Multi-Machine Architecture — No Local Fallbacks
