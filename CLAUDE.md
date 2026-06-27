@@ -22,7 +22,7 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 
 **IMPORTANT: Always use `tlda server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `tlda server stop` to stop, `tlda server status` to check.
 
-**If something goes wrong** (services won't start, build fails, viewer not loading, ports in use), delegate to the **ops agent** (`subagent_type: "ops"`). It knows the full build pipeline, service architecture, health checks, and common fixes.
+**If something goes wrong in a Claude session** (services won't start, build fails, viewer not loading, ports in use), delegate to the **ops agent** (`subagent_type: "ops"`). It knows the full build pipeline, service architecture, health checks, and common fixes. This is a Claude Agent-tool target; non-Claude agents should use their available tlda/fleet tools or ask for an ops handoff instead of pretending the `ops` subagent exists in their harness.
 
 ## Markdown Format
 
@@ -107,6 +107,10 @@ The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props`
 
 When adding a UI control inside existing chrome, inspect the neighboring controls first and match their layout behavior and visual weight. Do not introduce a boxed button, reserve new text space, or push nearby content unless the adjacent controls do the same.
 
+**tlda is a platform for reading.** It exists to let the user focus on the math, and it is not supposed to be shouty. The chrome's job is to recede so the paper is the subject. Unrequested UI changes or added prominence are not just scope creep; they break the product's core purpose by making a quiet reading surface shouty.
+
+**Do not change the UI unless explicitly asked.** No making your feature more prominent, no added chrome/controls, no bells and whistles, no visual redesign. If your task touches a UI file, make ONLY the requested change and leave everything else exactly as it looks. Agents are not visual designers and consistently underestimate how destructive unrequested UI changes are to the experience — so the rule is simply: don't touch the UI you weren't asked to touch.
+
 ## Fleet Chat Artifact Contract
 
 Local file paths mentioned in fleet chat are supposed to be resolved, uploaded to
@@ -133,7 +137,7 @@ Detailed contract: `docs/fleet-chat-artifacts.md`.
 
 ## Fleet Shape Ownership & Junk Identities
 
-Per-device fleet shapes (`fleet-chat`, `fleet-agents`, `fleet-search`, `fleet-docview`, `fleet-reaper`, `fleet-inbox`, `fleet-touch-inbox`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`) are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` and `saveAnchorOffsets` bail when identity/device is unresolved rather than stamping empty ownership fields or creating a bare/global anchor, so no-identity sessions can't spawn orphans.
+Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-utils.ts`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`). They are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` bails when identity/device is unresolved rather than stamping empty ownership fields, so no-identity sessions can't spawn owned layouts.
 
 Browser/UI tests that create fleet shapes in a real document room must clean up every shape and anchor they create before exiting. Do not leave test identities, alien-device shapes, or generated fleet layouts in shared rooms like `bregman`; persisted room pollution makes real review sessions look like multiple layouts are fighting each other.
 
@@ -149,9 +153,11 @@ This is **fine and tolerated**: because ownership is `uid === getHumanId()`, a s
 server/
 ├── unified-server.mjs        # Single process: Express + Yjs WS + SPA + API
 ├── lib/
-│   ├── yjs-sync.mjs           # Yjs doc management + persistence
+│   ├── sync-rooms.mjs         # TLDraw sync rooms, custom shape schemas, signals
 │   ├── project-store.mjs      # Project CRUD (server/projects/{name}/)
-│   └── build-runner.mjs       # Build pipeline (latexmk → dvisvgm → synctex → proof-pairing)
+│   ├── build-dispatch.mjs     # Build worker dispatch + side-effect relay
+│   ├── build-runner.mjs       # Build pipeline (latexmk → dvisvgm → synctex → proof-pairing)
+│   └── sentinel.mjs           # doc-version sentinel writer
 ├── routes/
 │   └── projects.mjs           # REST API: /api/projects/*
 ├── projects/                  # Per-project storage
@@ -160,18 +166,17 @@ server/
 │       ├── source/            # Uploaded tex/bib/sty/cls/figure files
 │       ├── output/            # Build output (SVGs, lookup, macros, proof-info)
 │       └── build.log
-└── data/{room}.yjs            # Persisted annotations per room
+└── data/                      # Server persistence
 
 cli/
 ├── tlda.mjs                    # CLI entry point (installed as `tlda`)
-└── lib/
-    └── watcher.mjs            # File watcher → HTTP push to server
+└── lib/                        # CLI helpers and dev commands
 
 src/                           # Viewer SPA (React + TLDraw)
 ├── SvgDocument.tsx            # SVG page loading, layout, reload handling
 ├── MathNoteShape.tsx          # KaTeX-enabled sticky notes
 ├── ProofStatementOverlay.tsx  # Proof reader overlays
-├── useYjsSync.ts              # Real-time Yjs sync hook
+├── useYjsSync.ts              # Signal helpers layered on sync
 ├── synctexAnchor.ts           # Source-anchored annotation resolution
 └── svgDocumentLoader.ts       # Document loading, manifest, proof-info
 
@@ -180,9 +185,7 @@ mcp-server/
 ├── data-source.mjs            # Reads doc assets from disk or HTTP (TLDA_SERVER)
 └── svg-text.mjs               # SVG text extraction for shape interpretation
 
-public/docs/                   # Legacy doc storage (served as fallback)
-├── manifest.json              # Legacy document registry
-└── {doc-name}/                # SVGs + metadata
+bin/fleet-daemon.mjs           # Per-machine source/session watcher + daemon RPC
 ```
 
 ### How it fits together
@@ -201,9 +204,9 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Server URL resolution:** `TLDA_SERVER` env → `--server` flag → `~/.config/tlda/config.json` → `<proto>://localhost:5176`, where `<proto>` is **`https`** when the mkcert TLS certs exist (`~/.config/tlda/localhost+2.pem`) and `http` otherwise. On this machine the certs are present, so the server is **https-only** — use `https://localhost:5176`. A plaintext `http://localhost:5176` request to the TLS port returns an empty reply / `HTTP/0.9` garbage; that is **not** an outage, it's the wrong scheme. `getServerUrl()` in `shared/config.mjs` already picks the right scheme automatically, so don't hardcode `http://` anywhere.
+**Server URL resolution:** the active config in `~/.config/tlda/config.json` selects a named entry from `configs` using `defaultConfig` (or `TLDA_CONFIG`). `getServerUrl()` in `shared/config.mjs` returns that active config's `store.http`; `getFleetServerUrl()` returns `database.http`. Config entries are complete `{ database, store, licenseKey }` records, and a missing config or missing field fails loudly — there is no localhost fallback in the resolver. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
 
-**Split sync server:** Set `TLDA_SYNC_SERVER` to route shapes/signals to a different server (e.g. Fly) while reading doc assets from `TLDA_SERVER` or local disk. Used for running the triage agent against the published version.
+**Split database/store config:** The current split is the active config's `database` axis for fleet/chat/registry/agents and `store` axis for doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; update the active config instead.
 
 ### Live deploy and old publishing machinery
 
@@ -213,21 +216,15 @@ Use `fly deploy -c fly.live.toml` after rebuilding the SPA. Do not use
 
 `npm run publish-snapshot -- <doc>` syncs the working copy to `~/work/published/tlda/`, builds the viewer, and deploys to GitHub Pages + Fly. The published clone is a frozen snapshot — safe for the triage agent to read from while the working copy keeps changing.
 
-To run the triage agent against the published version:
-```bash
-cd ~/work/published/tlda
-TLDA_SYNC_SERVER=https://tldraw-sync-skip.fly.dev node cli/lib/triage-agent.mjs
-```
-
-The triage agent reads doc assets (lookup tables, macros, page data) from the published clone on disk. Shapes and signals sync through Fly — the same room students are connected to.
+The old `TLDA_SYNC_SERVER=... node cli/lib/triage-agent.mjs` path is no longer the documented model. Use the active config's database/store axes instead.
 
 ### For viewer development only
 
 Working on the React/TLDraw code (not normal paper review):
 
 ```bash
-node server/unified-server.mjs   # API + Yjs on 5176
-npx vite                          # HMR on 5173, proxies /api and /docs to 5176
+tlda-dev serve <branch>       # Vite dev server for a branch/worktree
+tlda-dev sandbox <branch>     # isolated backend + DB + projects + Vite for risky server/shape changes
 ```
 
 ## Math Notes
@@ -266,7 +263,7 @@ Use the **`monitor_add` / `monitor_remove` / `monitor_list` MCP tools**. `monito
 
 ### Responding
 - `add_note(doc, line, text, file?)` — persistent math note anchored to a source line
-- `reply_note(doc, id, text)` — append a reply tab to an existing note
+- `reply_note(doc, id, text)` — reply to an existing note when that MCP tool is available
 - `flash_location(file, line)` — flash a red circle at a source line
 - `scroll_to_line(doc, line, file?)` — scroll viewer to source line
 - `delete_annotation(doc, id)` — remove a note (or any annotation shape)
@@ -274,19 +271,13 @@ Use the **`monitor_add` / `monitor_remove` / `monitor_list` MCP tools**. `monito
 
 **Multi-file projects:** For documents that use `\input{}`/`\include{}`, pass the `file` parameter (e.g. `file="appendix.tex"`) to target lines in input files. Without `file`, tools default to the main tex file. The `lookup.json` keys input file lines as `"filename.tex:N"`.
 
-### Note threading
-Notes support reply chains via **threads**. A thread is a group of notes sharing the same canvas position, displayed as stacked tabs.
+### Note replies
+Some Claude MCP surfaces expose `reply_note(doc, id, text)` for responding to notes. The current viewer does **not** have the old note-threading tab UI: do not describe numbered tab handles, merge-by-drag, or detach-tab behavior unless you have reverified that UI in the browser.
 
-- `reply_note(doc, id, text)` adds a new tab to the note's `tabs` array and switches to it.
-- `read_annotations(doc)` returns `tabCount`, `activeTab`, and `tabs` fields when a note has multiple tabs.
-- `delete_annotation(doc, id)` deletes the entire note shape (all tabs).
-
-On the viewer canvas, multi-tab notes show numbered tab handles above the note. The user can merge notes by dragging one onto another (tabs combine), or detach a tab via right-click.
-
-The Notes tab in the panel has sort (document order / recency) and filter (all / pending MC / plain notes) controls.
+The Notes tab in the panel may have sort/filter controls; verify the current browser-visible UI before describing exact controls to the user.
 
 ### Cleanup
-- `delete_annotation(doc, id)` — remove a note (deletes all tabs)
+- `delete_annotation(doc, id)` — remove a note or annotation shape
 
 ### Review loop behavior
 When the user explicitly says they're reviewing a document with you — and reviewing is your primary task — subscribe with `monitor_add(doc)` and respond to feedback as it arrives on the channel:
@@ -359,25 +350,16 @@ Dependencies are sorted by page distance descending (furthest first). Same-page 
 
 ## Voice Input
 
-Voice input uses **whisper-stream** for local real-time transcription. No Google dependency, no network latency, runs entirely on the Mac's GPU.
+Voice input is **explicit opt-in**. The default backend preference is off. The app does not auto-select a backend and does not silently fall back to another backend if the selected one is unavailable.
 
-**Architecture:**
-```
-mic → whisper-stream (SDL) → stdout → whisper-bridge.mjs → ws:8179 → browser
-```
+Available backends are selected by the saved `voice-backend` preference:
+- `whisper` uses `whisper-stream` via `bin/whisper-bridge.mjs` on `ws://localhost:8179`.
+- `deepgram` / `deepgram-sdk` uses `bin/deepgram-sdk-bridge.mjs` through the server's same-origin `/voice/deepgram-sdk` proxy.
+- `chrome` uses Chrome/Web Speech only when explicitly selected and available.
 
-- `whisper-stream` captures the mic directly (via SDL, not the browser) and transcribes in 3-second streaming steps with VAD
-- `bin/whisper-bridge.mjs` relays transcription text over WebSocket to the browser
-- The browser connects to `ws://localhost:8179` and appends transcript chunks to the active chat textarea
-- Falls back to Chrome's Web Speech API if the bridge isn't running
+Whisper and Deepgram bridges are lazy-started when their explicit backend is selected. If a backend is unavailable, voice stays off or reports that backend as unavailable; it must not substitute Chrome/Web Speech implicitly.
 
-**Starting:** `tlda server start` auto-starts the whisper bridge. Manual start: `node bin/whisper-bridge.mjs`
-
-**Model:** Uses `small.en` (`/opt/homebrew/share/whisper-cpp/ggml-small.en.bin`). Override with `--model /path/to/model.bin`.
-
-**Forcing Chrome:** Add `&voice=chrome` to the URL to use Chrome's Web Speech API instead.
-
-**Log:** `~/.config/tlda/whisper-bridge.log`
+Whisper log: `~/.config/tlda/whisper-bridge.log`. Deepgram SDK log: `~/.config/tlda/deepgram-sdk-bridge.log`.
 
 ## Client Logging
 
@@ -398,17 +380,17 @@ The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `sessi
 
 **Stuck testing the app? Tell the `app-testing` agent — don't flail.** Playwright problems, dev-server issues, login/auth snags, or anything else blocking you from driving the app to test a change: don't burn time fighting the harness. Message the agent named `app-testing`; that's their domain.
 
-**Drive the browser with `tlda-dev pw` — one shared browser, never your own session.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a single persistent session that pops up lazily and persists across calls (so it stops "closing between commands"). You never `open`/`close` and never pick a `-s=` session — that per-agent lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
+**Drive the browser with `tlda-dev pw` — one shared browser with per-agent tabs.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a single persistent browser. Each agent gets its own tab inside that shared browser, selected atomically under the wrapper's lock before each forwarded verb. You never `open`/`close`, never manage tabs yourself, and never pick a `-s=` session — that lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
 
 ```bash
-tlda-dev pw acquire                 # take the lock + pop the shared browser (lazy)
+tlda-dev pw acquire                 # pop the shared browser (lazy) + ensure your tab
 tlda-dev pw goto "URL" ; tlda-dev pw click <ref> ; tlda-dev pw screenshot --filename f ; tlda-dev pw eval "() => expr"
-tlda-dev pw status                  # lock holder + browser up/down + URL
-tlda-dev pw release                 # give up the lock (browser stays up for the next agent)
+tlda-dev pw status                  # shared browser + your tab + current URL
+tlda-dev pw release                 # close/park your tab (browser stays up for others)
 tlda-dev pw reap                    # close the shared browser (the reaper)
 ```
 
-The lock is the existing `bin/pw-lock.sh` (auto-expires after 10 min; `tlda-dev pw status` shows the holder; `bin/pw-lock.sh steal <you>` to force-take as a last resort). The first forwarded `tlda-dev pw` verb auto-acquires it. **Skip's machine still can't handle two concurrent playwright sessions** — that's exactly why there's one shared browser behind a lock.
+The wrapper serializes forwarded verbs with the existing `bin/pw-lock.sh`, selects your tab, runs the verb, and releases quickly. **Skip's machine still can't handle two concurrent playwright browser sessions** — that's why there is one shared browser, with cheap per-agent tabs inside it.
 
 Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. **Detection: `navigator.webdriver` OR `?pw=1` in the URL.** Always include `&pw=1` in your `tlda-dev pw goto` URLs. This means:
 - Playwright windows are dark theme (not a white flash on Skip's screen at night)
@@ -416,13 +398,13 @@ Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-
 
 Do not undo either of these.
 
-### Deleting shapes from a live room: use `store.remove`, not `deleteShapes`
+### Deleting shapes from a live room: automation gotcha
 
-When removing shapes from a synced room programmatically in a playwright/automated session (e.g. cleaning up orphan/junk shapes), call **`editor.store.remove(['shape:…'])`**, not `editor.deleteShapes([...])`.
+For one-off cleanup, prefer the MCP tool **`delete_annotation(doc, id)`** when it is available: it removes any shape from the room server-side without a browser. Never use `POST …/sync/clear` or bulk-delete a live room.
 
 Observed during the userless-fleet-shape cleanup (2026-06-01): in an automated session, `editor.deleteShapes([...])` on fleet/anchor shapes tore the page down — the eval returned nothing, `window.__tldraw_editor__` went null afterward, and the delete **never flushed to the server** (the shape was still present after reload). The lower-level `editor.store.remove([...])` deleted the same shapes cleanly, persisted across reload, and left the editor alive. Root cause of the `deleteShapes` teardown is not pinned down — treat this as an observed automation gotcha, not a settled explanation.
 
-Even simpler for one-off cleanup: the MCP tool **`delete_annotation(doc, id)`** removes any shape from the room server-side (no browser needed) and is the most reliable path. (Reminder: never use `POST …/sync/clear` or bulk-delete — see app-development rule 8.)
+Current app code still uses `deleteShapes` in some paths, so do not make blanket claims that `deleteShapes` is forbidden everywhere.
 
 ## Self-Service Rule
 
