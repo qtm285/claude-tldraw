@@ -1,4 +1,23 @@
 # tlda - Paper Review & Annotation System
+
+<!-- lane:auto:start lane=app hash=101e8f0f5ad0 -->
+<!-- Auto-generated routing for the app lane. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). -->
+## Agents & routing (tlda/app lane)
+
+**Lane:** tlda/app. Load only app/tlda skills. For proof/writing *content* judgment,
+ask a math/writing agent — do not load their skills into yourself.
+
+**Holders — chat them; don't read heavy sources yourself** (see `~/work/dot-claude/reference/roles.md`):
+- **app-tester** — test/run the app, reproduce behavior. Fallback: `app-testing`.
+- **ops** — build, deploy, the live rig, machine/infra. **Hard rule:** if the app
+  seems down, tell ops — do not debug infra yourself.
+- **librarian** — logs, and how a fat skill works. Fallback: the skill / `debug-with-logs`.
+
+**Skills for this lane** (load only when the task names one — don't preload):
+tlda-orientation, app-development, app-testing, tlda-debugging, ops-guardrails,
+render-self-check. Anything else: ask the librarian.
+<!-- lane:auto:end -->
+
 **No backward compatibility.** Do not keep deprecated aliases, compatibility shims, or old command paths unless Skip explicitly asks for them.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
