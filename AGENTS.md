@@ -179,7 +179,28 @@ This is **fine and tolerated**: because ownership is `uid === getHumanId()`, a s
 - **A filter is empty ONLY when literally no agent has that name.** If an agent with the filtered name exists (awake or hibernating), resolution MUST return it — an empty result in that case is the bug, not a state to handle.
 - **Never destroy chat history on an empty/transient resolve.** Backstop for the genuine no-such-name case: show an empty-*filter* state, keep the messages. Dropping the thread because a filter momentarily resolved empty is fail-unsafe.
 
+**Three-layer factoring — where lineage/phase logic is allowed to live.** Lineage must not be a concept smeared across the code. There are exactly three lanes, and phase-suffix handling is confined to two of them:
+
+1. **Identity / filtering** → the **exact `friendly_name`**. No phase logic, ever. `chief` ≠ `chief:day`.
+2. **Search** → the *only* home for phase-**stripping** ("find every seat of the `chief` lineage"). Define it here, scoped and named search-only.
+3. **Pretty-printing** → a **generic ending→glyph search-and-replace** (a table of suffix→glyph rules); lineage suffixes like `:day`/`:dusk` are just one rule set, factored so other end-pretty-printers plug into the same mechanism. Pretty-printing renders a decoration and **never emits a stripped bare name** that something else could grab as an identity.
+
+The recurring bug (chat history vanishing) came from crossing these streams: a **display helper that phase-strips** (`agentDisplayName`) leaked into **filter state**, so picking `chief:day` persisted as `dm chief`. A display/search operation must never become an identity key. Ideally enforce this with a distinct identity type so a display string can't be passed where a `friendly_name` is required.
+
 **Related process rule — don't manufacture non-issues.** When you see something like lineage-suffixed names in a log, do not invent an elaborate root cause (e.g. "the resolver needs lineage-base awareness") and build a fix for it. That is making a non-issue out of a simple/known one (here: a chat filtered to a single agent that was flickering during status churn). Confirm the actual mechanism in the code and against the logs before proposing a fix.
+
+## Event-Based Sets — No Per-Render Roster Scans
+
+**Invariant (Skip's, hard):** a filter/membership set is **maintained incrementally on events and read at render** (O(matched)). It must **never** be re-derived by scanning the whole agent roster on every render or every event. **Any per-render/per-event roster scan is a performance leak, by definition** — even if it produces only one visible line, the hidden O(roster) loop runs every time. (Symptom: chat "flickers" / lags when many agents churn; the classic case rendered *one* status line by looping ~1,500 hibernating agents on every thinking edge.)
+
+**The abstraction already exists — use it, don't reinvent it.** The `algo-refactor` (merged ~2026-06) built a generic incrementally-maintained reactive collection:
+- `shared/live-store.ts` — `createLiveStore<T>()`, then `store.view(filter, { key, compare })` → a `LiveView` (a filtered set maintained on `upsert`/`remove`, read via `.list`/`.get()`, `.subscribe(cb(list, delta))`, ref-counted keyed views) and `store.index(name, keyOf)` → O(1) maintained buckets.
+- Client event set: `src/fleet/fleet-data.ts` (`viewFleetEvents`). **Reference React consumer to copy: `useFleetEvents` in `src/fleet-data-adapter.ts`** (wires a keyed `LiveView` via `useSyncExternalStore`); `useFleetThinking`/`useFleetCompacting` are already correct (event-driven Maps, no roster scan).
+- Server registry: `server/lib/fleet-store.mjs` maintained roster views (`_aliveAgentRosterView`, served by `getAliveAgents()`). **The server side landed; the client shape layer only partially migrated** — remaining leaks live in `FleetChatShape.tsx` (e.g. `statusTargetIds`/`hibernatingAgents`/`ctxRenderKey`/`isImpossibleFilter`) and `FleetIconPill.tsx` (unmemoized `aliveCount`). Route these through `store.view()`/`store.index()` instead of iterating `agents`.
+
+Resolve filters/sets by reading a maintained view, keep it live by updating on filter-changing events (status/name/membership deltas). Not "cache once and go stale," not "rescan every render" — a live set maintained by events, behind the one `live-store` interface.
+
+**Testing rule (hard) — test on the DEFAULT layout.** Bugs like the roster-scan leak get mischaracterized when an agent tests with an unrealistic setup (e.g. a chat that isn't filtered, or a contrived many-agent layout nobody actually uses). A real user's chat is **filtered to a small set** (often one agent). **Playwright/browser tests must use the default layout** — the realistic setup the user actually has — so leaks surface in realistic use instead of hiding. Proving a fix "handles N agents efficiently" at a scale the user never runs is testing the wrong thing. (Automated sessions already get forced theme + unlinked camera in `src/main.tsx`; default-layout forcing belongs in the same place.)
 
 ## Architecture
 
