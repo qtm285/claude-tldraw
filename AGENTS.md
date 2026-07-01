@@ -168,6 +168,19 @@ Browser/UI tests that create fleet shapes in a real document room must clean up 
 
 This is **fine and tolerated**: because ownership is `uid === getHumanId()`, a shape scoped to a junk id only ever shows in a session holding that same junk id — it never pollutes a real user's (`fleet:skip`, `fleet:dmitry`, …) view. We deliberately do **not** harden `register` to reject non-`fleet:` human ids. If junk rows accumulate in `~/.config/tlda/fleet.db` they can be swept with `DELETE FROM agents WHERE human=1 AND id NOT LIKE 'fleet:%'` (back up the rows first; never touch `fleet:`-prefixed humans).
 
+## Fleet Chat Filtering — Lineage-Agnostic, Existence ≠ Liveness
+
+**The chat/filter resolution code knows NOTHING about lineage.** This is a hard, standing rule (Skip has stated it many times). Violating it is the recurring "chat history vanishes" bug.
+
+- **A lineage is ONLY a friendly-name convention.** `chief`, `chief:day`, `chief:dusk`, `chief:night` are **four different, distinct agents** — separate seats, each with **one occupant at a time**. They are not one logical entity. The `:phase` suffix is cosmetic.
+- **Filtering resolves a NAME to whoever currently occupies that exact name, live, at query time.** No prefix matching, no lineage-base expansion (`chief` must NOT match `chief:day`/`chief:dusk`), no lineage awareness of any kind. A filter to a name is that name, resolved to its current occupant.
+- **Do not cache an early-resolved name→agent-id.** Early-resolving a filter to a concrete agent id and storing it is caching-only; if it isn't kept updated it goes stale when the occupant rotates/hibernates/flickers, and the filter then resolves to nothing. Store the **name**; resolve to the current occupant at query time. (Same principle as deriving version/build state from the Yjs sentinel live instead of a one-shot cached fetch — see "Two Communication Systems".)
+- **Existence is not liveness. Resolution INCLUDES hibernating agents.** "Hibernating" means "no live process" — a status the daemon reports, nothing more. A hibernating agent **still exists**; a chat filtered to it must **show its content**, with the agent marked hibernating. The daemon's "no process" must never be adjudicated as "the agent does not exist." Never restrict filter resolution to awake/alive-only.
+- **A filter is empty ONLY when literally no agent has that name.** If an agent with the filtered name exists (awake or hibernating), resolution MUST return it — an empty result in that case is the bug, not a state to handle.
+- **Never destroy chat history on an empty/transient resolve.** Backstop for the genuine no-such-name case: show an empty-*filter* state, keep the messages. Dropping the thread because a filter momentarily resolved empty is fail-unsafe.
+
+**Related process rule — don't manufacture non-issues.** When you see something like lineage-suffixed names in a log, do not invent an elaborate root cause (e.g. "the resolver needs lineage-base awareness") and build a fix for it. That is making a non-issue out of a simple/known one (here: a chat filtered to a single agent that was flickering during status churn). Confirm the actual mechanism in the code and against the logs before proposing a fix.
+
 ## Architecture
 
 ```
