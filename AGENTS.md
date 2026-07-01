@@ -156,6 +156,25 @@ failure until a browser check demonstrates the exact behavior the user needs.
 
 Detailed contract: `docs/fleet-chat-artifacts.md`.
 
+## Fleet Chat Filtering — Names, Search, Display
+
+Fleet chat identity is exact-name based. A filter, DM target, send target, or
+routing label uses the agent's current `friendly_name` as an opaque string; a
+suffix such as `:day` or `:dusk` is part of that name. Do not strip suffixes when
+building filters, resolving recipients, dragging agent pills, or loading chat
+history.
+
+Loose or historical matching belongs only in explicit search/history code: "find
+agents/messages ever named X" is a search operation, not chat routing. Name
+history may relate old fleet ids to search results or historical transcript
+provenance, but it must not cause a live filter for `chief` to include
+`chief:day`.
+
+Display is separate. UI may apply the generic suffix-to-glyph pretty-printer
+(`:day`, `:dusk`, etc.) to render a decorated label, but that decorated label is
+not a filter value. If code needs to show a name and also route/filter by it,
+carry two values: the display label and the exact name.
+
 ## Fleet Shape Ownership & Junk Identities
 
 Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-utils.ts`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`). They are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` bails when identity/device is unresolved rather than stamping empty ownership fields, so no-identity sessions can't spawn owned layouts.
