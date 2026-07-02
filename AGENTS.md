@@ -156,6 +156,25 @@ failure until a browser check demonstrates the exact behavior the user needs.
 
 Detailed contract: `docs/fleet-chat-artifacts.md`.
 
+## Fleet Chat Filtering — Names, Search, Display
+
+Fleet chat identity is exact-name based. A filter, DM target, send target, or
+routing label uses the agent's current `friendly_name` as an opaque string; a
+suffix such as `:day` or `:dusk` is part of that name. Do not strip suffixes when
+building filters, resolving recipients, dragging agent pills, or loading chat
+history.
+
+Loose or historical matching belongs only in explicit search/history code: "find
+agents/messages ever named X" is a search operation, not chat routing. Name
+history may relate old fleet ids to search results or historical transcript
+provenance, but it must not cause a live filter for `chief` to include
+`chief:day`.
+
+Display is separate. UI may apply the generic suffix-to-glyph pretty-printer
+(`:day`, `:dusk`, etc.) to render a decorated label, but that decorated label is
+not a filter value. If code needs to show a name and also route/filter by it,
+carry two values: the display label and the exact name.
+
 ## Fleet Shape Ownership & Junk Identities
 
 Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-utils.ts`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`). They are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` bails when identity/device is unresolved rather than stamping empty ownership fields, so no-identity sessions can't spawn owned layouts.
@@ -167,6 +186,40 @@ Browser/UI tests that create fleet shapes in a real document room must clean up 
 **Incidental, tolerated issue — junk human identities.** The WS `register` handler (`server/unified-server.mjs`) stores whatever `id` the client sends, verbatim. The production identity flow (`registerHuman`) always sends `fleet:<sanitized-name>`, but **test scripts call `register` directly with arbitrary ids** (numeric floats like `2.0`, `7.0`, `261710.0`), creating human-agent rows whose id is not `fleet:`-prefixed. A session that logs in as one of those test names gets the malformed id, and fleet shapes it creates get that id as their `userId`.
 
 This is **fine and tolerated**: because ownership is `uid === getHumanId()`, a shape scoped to a junk id only ever shows in a session holding that same junk id — it never pollutes a real user's (`fleet:skip`, `fleet:dmitry`, …) view. We deliberately do **not** harden `register` to reject non-`fleet:` human ids. If junk rows accumulate in `~/.config/tlda/fleet.db` they can be swept with `DELETE FROM agents WHERE human=1 AND id NOT LIKE 'fleet:%'` (back up the rows first; never touch `fleet:`-prefixed humans).
+
+## Fleet Chat Filtering — Lineage-Agnostic, Existence ≠ Liveness
+
+**The chat/filter resolution code knows NOTHING about lineage.** This is a hard, standing rule (Skip has stated it many times). Violating it is the recurring "chat history vanishes" bug.
+
+- **A lineage is ONLY a friendly-name convention.** `chief`, `chief:day`, `chief:dusk`, `chief:night` are **four different, distinct agents** — separate seats, each with **one occupant at a time**. They are not one logical entity. The `:phase` suffix is cosmetic.
+- **Filtering resolves a NAME to whoever currently occupies that exact name, live, at query time.** No prefix matching, no lineage-base expansion (`chief` must NOT match `chief:day`/`chief:dusk`), no lineage awareness of any kind. A filter to a name is that name, resolved to its current occupant.
+- **Do not cache an early-resolved name→agent-id.** Early-resolving a filter to a concrete agent id and storing it is caching-only; if it isn't kept updated it goes stale when the occupant rotates/hibernates/flickers, and the filter then resolves to nothing. Store the **name**; resolve to the current occupant at query time. (Same principle as deriving version/build state from the Yjs sentinel live instead of a one-shot cached fetch — see "Two Communication Systems".)
+- **Existence is not liveness. Resolution INCLUDES hibernating agents.** "Hibernating" means "no live process" — a status the daemon reports, nothing more. A hibernating agent **still exists**; a chat filtered to it must **show its content**, with the agent marked hibernating. The daemon's "no process" must never be adjudicated as "the agent does not exist." Never restrict filter resolution to awake/alive-only.
+- **A filter is empty ONLY when literally no agent has that name.** If an agent with the filtered name exists (awake or hibernating), resolution MUST return it — an empty result in that case is the bug, not a state to handle.
+- **Never destroy chat history on an empty/transient resolve.** Backstop for the genuine no-such-name case: show an empty-*filter* state, keep the messages. Dropping the thread because a filter momentarily resolved empty is fail-unsafe.
+
+**Three-layer factoring — where lineage/phase logic is allowed to live.** Lineage must not be a concept smeared across the code. There are exactly three lanes, and phase-suffix handling is confined to two of them:
+
+1. **Identity / filtering** → the **exact `friendly_name`**. No phase logic, ever. `chief` ≠ `chief:day`.
+2. **Search** → the *only* home for phase-**stripping** ("find every seat of the `chief` lineage"). Define it here, scoped and named search-only.
+3. **Pretty-printing** → a **generic ending→glyph search-and-replace** (a table of suffix→glyph rules); lineage suffixes like `:day`/`:dusk` are just one rule set, factored so other end-pretty-printers plug into the same mechanism. Pretty-printing renders a decoration and **never emits a stripped bare name** that something else could grab as an identity.
+
+The recurring bug (chat history vanishing) came from crossing these streams: a **display helper that phase-strips** (`agentDisplayName`) leaked into **filter state**, so picking `chief:day` persisted as `dm chief`. A display/search operation must never become an identity key. Ideally enforce this with a distinct identity type so a display string can't be passed where a `friendly_name` is required.
+
+**Related process rule — don't manufacture non-issues.** When you see something like lineage-suffixed names in a log, do not invent an elaborate root cause (e.g. "the resolver needs lineage-base awareness") and build a fix for it. That is making a non-issue out of a simple/known one (here: a chat filtered to a single agent that was flickering during status churn). Confirm the actual mechanism in the code and against the logs before proposing a fix.
+
+## Event-Based Sets — No Per-Render Roster Scans
+
+**Invariant (Skip's, hard):** a filter/membership set is **maintained incrementally on events and read at render** (O(matched)). It must **never** be re-derived by scanning the whole agent roster on every render or every event. **Any per-render/per-event roster scan is a performance leak, by definition** — even if it produces only one visible line, the hidden O(roster) loop runs every time. (Symptom: chat "flickers" / lags when many agents churn; the classic case rendered *one* status line by looping ~1,500 hibernating agents on every thinking edge.)
+
+**The abstraction already exists — use it, don't reinvent it.** The `algo-refactor` (merged ~2026-06) built a generic incrementally-maintained reactive collection:
+- `shared/live-store.ts` — `createLiveStore<T>()`, then `store.view(filter, { key, compare })` → a `LiveView` (a filtered set maintained on `upsert`/`remove`, read via `.list`/`.get()`, `.subscribe(cb(list, delta))`, ref-counted keyed views) and `store.index(name, keyOf)` → O(1) maintained buckets.
+- Client event set: `src/fleet/fleet-data.ts` (`viewFleetEvents`). **Reference React consumer to copy: `useFleetEvents` in `src/fleet-data-adapter.ts`** (wires a keyed `LiveView` via `useSyncExternalStore`); `useFleetThinking`/`useFleetCompacting` are already correct (event-driven Maps, no roster scan).
+- Server registry: `server/lib/fleet-store.mjs` maintained roster views (`_aliveAgentRosterView`, served by `getAliveAgents()`). **The server side landed; the client shape layer only partially migrated** — remaining leaks live in `FleetChatShape.tsx` (e.g. `statusTargetIds`/`hibernatingAgents`/`ctxRenderKey`/`isImpossibleFilter`) and `FleetIconPill.tsx` (unmemoized `aliveCount`). Route these through `store.view()`/`store.index()` instead of iterating `agents`.
+
+Resolve filters/sets by reading a maintained view, keep it live by updating on filter-changing events (status/name/membership deltas). Not "cache once and go stale," not "rescan every render" — a live set maintained by events, behind the one `live-store` interface.
+
+**Testing rule (hard) — test on the DEFAULT layout.** Bugs like the roster-scan leak get mischaracterized when an agent tests with an unrealistic setup (e.g. a chat that isn't filtered, or a contrived many-agent layout nobody actually uses). A real user's chat is **filtered to a small set** (often one agent). **Playwright/browser tests must use the default layout** — the realistic setup the user actually has — so leaks surface in realistic use instead of hiding. Proving a fix "handles N agents efficiently" at a scale the user never runs is testing the wrong thing. (Automated sessions already get forced theme + unlinked camera in `src/main.tsx`; default-layout forcing belongs in the same place.)
 
 ## Architecture
 
