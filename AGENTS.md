@@ -164,6 +164,14 @@ suffix such as `:day` or `:dusk` is part of that name. Do not strip suffixes whe
 building filters, resolving recipients, dragging agent pills, or loading chat
 history.
 
+Portable code must never bake in a specific human identity. Do not hardcode
+`fleet:skip`, `skip`, or any other real user as a default caller, operator,
+owner, login, routing principal, or privilege source in shared app/CLI/server
+code. Resolve human identity from the authenticated session, explicit config, an
+operator-provided flag, or the existing identity machinery. If that machinery is
+insufficient, treat it as an identity/auth design task; do not patch around it
+with a person-specific fallback.
+
 Loose or historical matching belongs only in explicit search/history code: "find
 agents/messages ever named X" is a search operation, not chat routing. Name
 history may relate old fleet ids to search results or historical transcript
