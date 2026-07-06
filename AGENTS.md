@@ -22,6 +22,12 @@ render-self-check. Anything else: ask the librarian.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
 
+## GROUND TRUTH: SESSIONS AND JSONL ARE NEVER LOST
+
+**AN AGENT'S SESSION HANDLE IS NEVER GONE. AN AGENT'S ROLLOUT OR JSONL IS NEVER GONE. WHAT HAS HAPPENED IS WE HAVE LOST TRACK OF THE SESSION IN OUR OWN RECORD.**
+
+Agents constantly claim "my JSONL got reaped" or "the session handle is gone." **THAT DOES NOT HAPPEN. IT IS NOT A THING.** The rollout / JSONL always exists on disk. When a respawn fails with "no resume handle," the cause is **our own shitty record-keeping losing the pointer** — never the data being deleted or reaped. Do not ever offer "the JSONL got reaped" as an explanation; it is false. Go find the session on disk instead.
+
 ## Quick Reference
 
 | Task | Command |
