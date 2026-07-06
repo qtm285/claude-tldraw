@@ -239,7 +239,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 
 ```bash
 tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
-TLDA_CONFIG=wmtry tlda agent spawn …     # env form, same effect
+TLDA_CONFIG=wmtry tlda agent create …    # env form, same effect
 tlda daemon start --config wmtry         # the daemon + every agent it spawns target wmtry
 ```
 
