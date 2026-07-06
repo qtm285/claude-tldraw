@@ -22,11 +22,39 @@ render-self-check. Anything else: ask the librarian.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
 
+## GROUND TRUTH: THE REAL SERVER AND THE REAL AGENT DATABASE ARE ON FLY
+
+**The real tlda server — and the real fleet/agent database — live on Fly (fly.io).** The active config's `TLDA_SERVER` points at the Fly app (e.g. `https://tlda-fly.cormorant-matrix.ts.net`); that is where the authoritative roster, agents, chat, and registry are.
+
+**The local `~/.config/tlda/fleet.db` on the Mini is NOT the real database. That file is junk.** It is stale/local and does not reflect the real fleet. Do **not** query it, count it, or treat it as authoritative for anything — an audit, a roster, "how many agents do we have," whether an agent is spawnable, ANY of it. If you find yourself running `sqlite3 ~/.config/tlda/fleet.db`, stop: you are looking at the wrong thing.
+
+**To reach real agent/fleet state, go through the real server** — the fleet MCP tools (`fleet_table`, `register`, `spawn`, `search_logs`, …) and the Fly-backed API, which resolve through the active config's `database` axis. The MCP/CLI already point there via `TLDA_SERVER`; use them instead of reading a local file.
+
 ## GROUND TRUTH: SESSIONS AND JSONL ARE NEVER LOST
 
 **AN AGENT'S SESSION HANDLE IS NEVER GONE. AN AGENT'S ROLLOUT OR JSONL IS NEVER GONE. WHAT HAS HAPPENED IS WE HAVE LOST TRACK OF THE SESSION IN OUR OWN RECORD.**
 
 Agents constantly claim "my JSONL got reaped" or "the session handle is gone." **THAT DOES NOT HAPPEN. IT IS NOT A THING.** The rollout / JSONL always exists on disk. When a respawn fails with "no resume handle," the cause is **our own shitty record-keeping losing the pointer** — never the data being deleted or reaped. Do not ever offer "the JSONL got reaped" as an explanation; it is false. Go find the session on disk instead.
+
+## GROUND TRUTH: ONE DAEMON. A SECOND DAEMON IS A BUG.
+
+**The core invariant: ONE DAEMON PER ENVIRONMENT.** This is **not** a global machine singleton — we run multiple environments/projects, and each legitimately has its own daemon. The rule is that **exactly one daemon watches a given project/environment** (equivalently: any one agent's JSONL is watched by exactly one daemon). **Two daemons watching the *same* environment** is the bug — that double-watch corrupts activity-card delivery and agent status, and the confused status can even get live agents reaped. So the lock must be **keyed on the environment**, not global: a second daemon for an environment already being watched must refuse to start. A stray daemon (from a worktree, a sandbox, a stray `node bin/fleet-daemon.mjs`) that ends up watching an already-watched environment breaks it — it is **NOT** harmless "because it's just a sandbox daemon."
+
+**Troubleshooting rule (this project):** if **activity cards or agent status** are wrong — cards not showing, status stuck/wrong, live agents shown dead — **FIRST run `pgrep -fl fleet-daemon` and check whether more than one daemon is running.** If there are two, kill the stray (non-launchd) one; launchd keeps the real singleton alive. Do **not** rationalize a second daemon away — "the other one is just a sandbox daemon, it doesn't matter" is exactly the wrong call. It matters.
+
+## When Skip states the problem, that is the starting axiom — not a claim to debate.
+
+When Skip tells you what is wrong ("it's the daemon," "it worked until last night," "this is a systems problem"), treat it as **ground truth** and go find the mechanism that makes it true. Do **not** argue it isn't true, offer a competing theory, or act like he's mistaken. His lived observation of the running app beats your code-reading and your tests **every time** — if your investigation contradicts him, you are looking in the wrong place, so keep digging. The "well, actually / but / have you considered" reply to a Skip problem-statement is the failure. Accept it, then confirm by acting.
+
+## GROUND TRUTH: IF YOU'RE GIVEN A SOURCE ARTIFACT, LOOK AT IT
+
+**When a task hands you a reference — an image, a screenshot, a file, a doc — open it and actually look at it before you act.** Don't work off a secondhand text description of what it contains, and don't assume existing/shipped code already captures it. A description of an artifact is not the artifact. This applies to design work exactly as much as to code: if Skip attached a reference image, fetch and view that image before producing anything that's supposed to be grounded in it.
+
+**If you didn't look at something you were given, say so before you present work — not after.** Producing output and letting the recipient discover mid-review that you never checked the reference wastes their evaluation time twice: once reading your output, once learning it wasn't grounded in what they gave you. "I haven't looked at X yet, here's a rough attempt" costs one sentence. Silently skipping it costs someone else's whole review.
+
+## A PLAN IS THE SPECIFIC HOW FOR EVERY ITEM — do not make Skip explain this.
+
+If you're handed a to-do list, a plan describes **specifically how you will do every single item on it.** A 60-item list gets a 60-item plan — **one concrete disposition per item**, not grouped, not collapsed into "we'll handle these." **"I'll look at the list and do the things" is not a plan. A plan never refers to another plan.** And here is the part agents keep skipping: these lists have been left to **rot** by every agent who confidently asserted they'd "take care of it." So an assertion that you'll accomplish what no one before you has is worthless on its own — your plan must state **what you will do *differently*** so it doesn't rot the same way. Never hand Skip a confident "I've got it" without a concrete, *different* mechanism behind it. Making him explain what a plan is, or that he'll hold you accountable to it, is a failure.
 
 ## Quick Reference
 
