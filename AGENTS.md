@@ -22,6 +22,40 @@ render-self-check. Anything else: ask the librarian.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
 
+## GROUND TRUTH: THE REAL SERVER AND THE REAL AGENT DATABASE ARE ON FLY
+
+**The real tlda server — and the real fleet/agent database — live on Fly (fly.io).** The active config's `TLDA_SERVER` points at the Fly app (e.g. `https://tlda-fly.cormorant-matrix.ts.net`); that is where the authoritative roster, agents, chat, and registry are.
+
+**The local `~/.config/tlda/fleet.db` on the Mini is NOT the real database. That file is junk.** It is stale/local and does not reflect the real fleet. Do **not** query it, count it, or treat it as authoritative for anything — an audit, a roster, "how many agents do we have," whether an agent is spawnable, ANY of it. If you find yourself running `sqlite3 ~/.config/tlda/fleet.db`, stop: you are looking at the wrong thing.
+
+**To reach real agent/fleet state, go through the real server** — the fleet MCP tools (`fleet_table`, `register`, `spawn`, `search_logs`, …) and the Fly-backed API, which resolve through the active config's `database` axis. The MCP/CLI already point there via `TLDA_SERVER`; use them instead of reading a local file.
+
+## GROUND TRUTH: SESSIONS AND JSONL ARE NEVER LOST
+
+**AN AGENT'S SESSION HANDLE IS NEVER GONE. AN AGENT'S ROLLOUT OR JSONL IS NEVER GONE. WHAT HAS HAPPENED IS WE HAVE LOST TRACK OF THE SESSION IN OUR OWN RECORD.**
+
+Agents constantly claim "my JSONL got reaped" or "the session handle is gone." **THAT DOES NOT HAPPEN. IT IS NOT A THING.** The rollout / JSONL always exists on disk. When a respawn fails with "no resume handle," the cause is **our own shitty record-keeping losing the pointer** — never the data being deleted or reaped. Do not ever offer "the JSONL got reaped" as an explanation; it is false. Go find the session on disk instead.
+
+## GROUND TRUTH: ONE DAEMON. A SECOND DAEMON IS A BUG.
+
+**The core invariant: ONE DAEMON PER ENVIRONMENT.** This is **not** a global machine singleton — we run multiple environments/projects, and each legitimately has its own daemon. The rule is that **exactly one daemon watches a given project/environment** (equivalently: any one agent's JSONL is watched by exactly one daemon). **Two daemons watching the *same* environment** is the bug — that double-watch corrupts activity-card delivery and agent status, and the confused status can even get live agents reaped. So the lock must be **keyed on the environment**, not global: a second daemon for an environment already being watched must refuse to start. A stray daemon (from a worktree, a sandbox, a stray `node bin/fleet-daemon.mjs`) that ends up watching an already-watched environment breaks it — it is **NOT** harmless "because it's just a sandbox daemon."
+
+**Troubleshooting rule (this project):** if **activity cards or agent status** are wrong — cards not showing, status stuck/wrong, live agents shown dead — **FIRST run `pgrep -fl fleet-daemon` and check whether more than one daemon is running.** If there are two, kill the stray (non-launchd) one; launchd keeps the real singleton alive. Do **not** rationalize a second daemon away — "the other one is just a sandbox daemon, it doesn't matter" is exactly the wrong call. It matters.
+
+## When Skip states the problem, that is the starting axiom — not a claim to debate.
+
+When Skip tells you what is wrong ("it's the daemon," "it worked until last night," "this is a systems problem"), treat it as **ground truth** and go find the mechanism that makes it true. Do **not** argue it isn't true, offer a competing theory, or act like he's mistaken. His lived observation of the running app beats your code-reading and your tests **every time** — if your investigation contradicts him, you are looking in the wrong place, so keep digging. The "well, actually / but / have you considered" reply to a Skip problem-statement is the failure. Accept it, then confirm by acting.
+
+## GROUND TRUTH: IF YOU'RE GIVEN A SOURCE ARTIFACT, LOOK AT IT
+
+**When a task hands you a reference — an image, a screenshot, a file, a doc — open it and actually look at it before you act.** Don't work off a secondhand text description of what it contains, and don't assume existing/shipped code already captures it. A description of an artifact is not the artifact. This applies to design work exactly as much as to code: if Skip attached a reference image, fetch and view that image before producing anything that's supposed to be grounded in it.
+
+**If you didn't look at something you were given, say so before you present work — not after.** Producing output and letting the recipient discover mid-review that you never checked the reference wastes their evaluation time twice: once reading your output, once learning it wasn't grounded in what they gave you. "I haven't looked at X yet, here's a rough attempt" costs one sentence. Silently skipping it costs someone else's whole review.
+
+## A PLAN IS THE SPECIFIC HOW FOR EVERY ITEM — do not make Skip explain this.
+
+If you're handed a to-do list, a plan describes **specifically how you will do every single item on it.** A 60-item list gets a 60-item plan — **one concrete disposition per item**, not grouped, not collapsed into "we'll handle these." **"I'll look at the list and do the things" is not a plan. A plan never refers to another plan.** And here is the part agents keep skipping: these lists have been left to **rot** by every agent who confidently asserted they'd "take care of it." So an assertion that you'll accomplish what no one before you has is worthless on its own — your plan must state **what you will do *differently*** so it doesn't rot the same way. Never hand Skip a confident "I've got it" without a concrete, *different* mechanism behind it. Making him explain what a plan is, or that he'll hold you accountable to it, is a failure.
+
 ## Quick Reference
 
 | Task | Command |
@@ -156,33 +190,6 @@ failure until a browser check demonstrates the exact behavior the user needs.
 
 Detailed contract: `docs/fleet-chat-artifacts.md`.
 
-## Fleet Chat Filtering — Names, Search, Display
-
-Fleet chat identity is exact-name based. A filter, DM target, send target, or
-routing label uses the agent's current `friendly_name` as an opaque string; a
-suffix such as `:day` or `:dusk` is part of that name. Do not strip suffixes when
-building filters, resolving recipients, dragging agent pills, or loading chat
-history.
-
-Portable code must never bake in a specific human identity. Do not hardcode
-`fleet:skip`, `skip`, or any other real user as a default caller, operator,
-owner, login, routing principal, or privilege source in shared app/CLI/server
-code. Resolve human identity from the authenticated session, explicit config, an
-operator-provided flag, or the existing identity machinery. If that machinery is
-insufficient, treat it as an identity/auth design task; do not patch around it
-with a person-specific fallback.
-
-Loose or historical matching belongs only in explicit search/history code: "find
-agents/messages ever named X" is a search operation, not chat routing. Name
-history may relate old fleet ids to search results or historical transcript
-provenance, but it must not cause a live filter for `chief` to include
-`chief:day`.
-
-Display is separate. UI may apply the generic suffix-to-glyph pretty-printer
-(`:day`, `:dusk`, etc.) to render a decorated label, but that decorated label is
-not a filter value. If code needs to show a name and also route/filter by it,
-carry two values: the display label and the exact name.
-
 ## Fleet Shape Ownership & Junk Identities
 
 Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-utils.ts`) and the HUD anchor (`fleet-hud-anchor--<user>--<device>`). They are scoped by both `userId` and `deviceId` props. The **single source of truth** for ownership is `isMyFleetShape` in `src/shapes/fleet-utils.ts`: a shape is yours iff `!!uid && uid === getHumanId() && !!dev && dev === getDeviceId()`. Both the HUD (what to render) and `createFleetLayout` (what to delete/replace on a layout switch) import that one function, so they can't disagree. A shape with an empty/missing `userId` or `deviceId` belongs to **no one** — it is not rendered or claimed by anyone. `createFleetLayout` bails when identity/device is unresolved rather than stamping empty ownership fields, so no-identity sessions can't spawn owned layouts.
@@ -194,40 +201,6 @@ Browser/UI tests that create fleet shapes in a real document room must clean up 
 **Incidental, tolerated issue — junk human identities.** The WS `register` handler (`server/unified-server.mjs`) stores whatever `id` the client sends, verbatim. The production identity flow (`registerHuman`) always sends `fleet:<sanitized-name>`, but **test scripts call `register` directly with arbitrary ids** (numeric floats like `2.0`, `7.0`, `261710.0`), creating human-agent rows whose id is not `fleet:`-prefixed. A session that logs in as one of those test names gets the malformed id, and fleet shapes it creates get that id as their `userId`.
 
 This is **fine and tolerated**: because ownership is `uid === getHumanId()`, a shape scoped to a junk id only ever shows in a session holding that same junk id — it never pollutes a real user's (`fleet:skip`, `fleet:dmitry`, …) view. We deliberately do **not** harden `register` to reject non-`fleet:` human ids. If junk rows accumulate in `~/.config/tlda/fleet.db` they can be swept with `DELETE FROM agents WHERE human=1 AND id NOT LIKE 'fleet:%'` (back up the rows first; never touch `fleet:`-prefixed humans).
-
-## Fleet Chat Filtering — Lineage-Agnostic, Existence ≠ Liveness
-
-**The chat/filter resolution code knows NOTHING about lineage.** This is a hard, standing rule (Skip has stated it many times). Violating it is the recurring "chat history vanishes" bug.
-
-- **A lineage is ONLY a friendly-name convention.** `chief`, `chief:day`, `chief:dusk`, `chief:night` are **four different, distinct agents** — separate seats, each with **one occupant at a time**. They are not one logical entity. The `:phase` suffix is cosmetic.
-- **Filtering resolves a NAME to whoever currently occupies that exact name, live, at query time.** No prefix matching, no lineage-base expansion (`chief` must NOT match `chief:day`/`chief:dusk`), no lineage awareness of any kind. A filter to a name is that name, resolved to its current occupant.
-- **Do not cache an early-resolved name→agent-id.** Early-resolving a filter to a concrete agent id and storing it is caching-only; if it isn't kept updated it goes stale when the occupant rotates/hibernates/flickers, and the filter then resolves to nothing. Store the **name**; resolve to the current occupant at query time. (Same principle as deriving version/build state from the Yjs sentinel live instead of a one-shot cached fetch — see "Two Communication Systems".)
-- **Existence is not liveness. Resolution INCLUDES hibernating agents.** "Hibernating" means "no live process" — a status the daemon reports, nothing more. A hibernating agent **still exists**; a chat filtered to it must **show its content**, with the agent marked hibernating. The daemon's "no process" must never be adjudicated as "the agent does not exist." Never restrict filter resolution to awake/alive-only.
-- **A filter is empty ONLY when literally no agent has that name.** If an agent with the filtered name exists (awake or hibernating), resolution MUST return it — an empty result in that case is the bug, not a state to handle.
-- **Never destroy chat history on an empty/transient resolve.** Backstop for the genuine no-such-name case: show an empty-*filter* state, keep the messages. Dropping the thread because a filter momentarily resolved empty is fail-unsafe.
-
-**Three-layer factoring — where lineage/phase logic is allowed to live.** Lineage must not be a concept smeared across the code. There are exactly three lanes, and phase-suffix handling is confined to two of them:
-
-1. **Identity / filtering** → the **exact `friendly_name`**. No phase logic, ever. `chief` ≠ `chief:day`.
-2. **Search** → the *only* home for phase-**stripping** ("find every seat of the `chief` lineage"). Define it here, scoped and named search-only.
-3. **Pretty-printing** → a **generic ending→glyph search-and-replace** (a table of suffix→glyph rules); lineage suffixes like `:day`/`:dusk` are just one rule set, factored so other end-pretty-printers plug into the same mechanism. Pretty-printing renders a decoration and **never emits a stripped bare name** that something else could grab as an identity.
-
-The recurring bug (chat history vanishing) came from crossing these streams: a **display helper that phase-strips** (`agentDisplayName`) leaked into **filter state**, so picking `chief:day` persisted as `dm chief`. A display/search operation must never become an identity key. Ideally enforce this with a distinct identity type so a display string can't be passed where a `friendly_name` is required.
-
-**Related process rule — don't manufacture non-issues.** When you see something like lineage-suffixed names in a log, do not invent an elaborate root cause (e.g. "the resolver needs lineage-base awareness") and build a fix for it. That is making a non-issue out of a simple/known one (here: a chat filtered to a single agent that was flickering during status churn). Confirm the actual mechanism in the code and against the logs before proposing a fix.
-
-## Event-Based Sets — No Per-Render Roster Scans
-
-**Invariant (Skip's, hard):** a filter/membership set is **maintained incrementally on events and read at render** (O(matched)). It must **never** be re-derived by scanning the whole agent roster on every render or every event. **Any per-render/per-event roster scan is a performance leak, by definition** — even if it produces only one visible line, the hidden O(roster) loop runs every time. (Symptom: chat "flickers" / lags when many agents churn; the classic case rendered *one* status line by looping ~1,500 hibernating agents on every thinking edge.)
-
-**The abstraction already exists — use it, don't reinvent it.** The `algo-refactor` (merged ~2026-06) built a generic incrementally-maintained reactive collection:
-- `shared/live-store.ts` — `createLiveStore<T>()`, then `store.view(filter, { key, compare })` → a `LiveView` (a filtered set maintained on `upsert`/`remove`, read via `.list`/`.get()`, `.subscribe(cb(list, delta))`, ref-counted keyed views) and `store.index(name, keyOf)` → O(1) maintained buckets.
-- Client event set: `src/fleet/fleet-data.ts` (`viewFleetEvents`). **Reference React consumer to copy: `useFleetEvents` in `src/fleet-data-adapter.ts`** (wires a keyed `LiveView` via `useSyncExternalStore`); `useFleetThinking`/`useFleetCompacting` are already correct (event-driven Maps, no roster scan).
-- Server registry: `server/lib/fleet-store.mjs` maintained roster views (`_aliveAgentRosterView`, served by `getAliveAgents()`). **The server side landed; the client shape layer only partially migrated** — remaining leaks live in `FleetChatShape.tsx` (e.g. `statusTargetIds`/`hibernatingAgents`/`ctxRenderKey`/`isImpossibleFilter`) and `FleetIconPill.tsx` (unmemoized `aliveCount`). Route these through `store.view()`/`store.index()` instead of iterating `agents`.
-
-Resolve filters/sets by reading a maintained view, keep it live by updating on filter-changing events (status/name/membership deltas). Not "cache once and go stale," not "rescan every render" — a live set maintained by events, behind the one `live-store` interface.
-
-**Testing rule (hard) — test on the DEFAULT layout.** Bugs like the roster-scan leak get mischaracterized when an agent tests with an unrealistic setup (e.g. a chat that isn't filtered, or a contrived many-agent layout nobody actually uses). A real user's chat is **filtered to a small set** (often one agent). **Playwright/browser tests must use the default layout** — the realistic setup the user actually has — so leaks surface in realistic use instead of hiding. Proving a fix "handles N agents efficiently" at a scale the user never runs is testing the wrong thing. (Automated sessions already get forced theme + unlinked camera in `src/main.tsx`; default-layout forcing belongs in the same place.)
 
 ## Architecture
 
@@ -294,7 +267,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 
 ```bash
 tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
-TLDA_CONFIG=wmtry tlda agent spawn …     # env form, same effect
+TLDA_CONFIG=wmtry tlda agent create …    # env form, same effect
 tlda daemon start --config wmtry         # the daemon + every agent it spawns target wmtry
 ```
 
