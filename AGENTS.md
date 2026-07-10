@@ -20,6 +20,8 @@ render-self-check. Anything else: ask the librarian.
 
 **No backward compatibility.** Do not keep deprecated aliases, compatibility shims, or old command paths unless Skip explicitly asks for them.
 
+**Keep working notes in scratch, not the repo.** Status briefs, drafts, plans, and other ephemeral working artifacts go in a scratch folder (the project `scratch/` or your session scratchpad) — not the repo root or committed docs. Untracked files don't dirty the index or block a deploy, but they clutter the tree; keep it tidy. Durable, verified documentation goes in the proper docs; everything working-and-temporary goes in scratch.
+
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
 
 ## GROUND TRUTH: THE REAL SERVER AND THE REAL AGENT DATABASE ARE ON FLY
