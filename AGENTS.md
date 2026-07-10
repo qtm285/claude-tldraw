@@ -1,5 +1,14 @@
 # tlda - Paper Review & Annotation System
 
+## NON-NEGOTIABLE: UI VERIFICATION
+
+- Don't serve a sandbox as a test for UI behavior.
+- Use `tlda-dev pw`.
+- If Skip is testing UI behavior, use the document he is looking at.
+- For agent PW testing, use the real environment with a different document—one Skip is
+  not using. Do not disturb his active document. If testing fleet UI, use the default
+  layout showing real fleet activity.
+
 <!-- lane:auto:start lane=app hash=101e8f0f5ad0 -->
 <!-- Auto-generated routing for the app lane. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). -->
 ## Agents & routing (tlda/app lane)
@@ -53,6 +62,47 @@ When Skip tells you what is wrong ("it's the daemon," "it worked until last nigh
 **When a task hands you a reference — an image, a screenshot, a file, a doc — open it and actually look at it before you act.** Don't work off a secondhand text description of what it contains, and don't assume existing/shipped code already captures it. A description of an artifact is not the artifact. This applies to design work exactly as much as to code: if Skip attached a reference image, fetch and view that image before producing anything that's supposed to be grounded in it.
 
 **If you didn't look at something you were given, say so before you present work — not after.** Producing output and letting the recipient discover mid-review that you never checked the reference wastes their evaluation time twice: once reading your output, once learning it wasn't grounded in what they gave you. "I haven't looked at X yet, here's a rough attempt" costs one sentence. Silently skipping it costs someone else's whole review.
+
+## CURRENT STATE BEFORE DELEGATION OR IMPLEMENTATION
+
+Project documents, handoff packets, scratch notes, and old task lists are historical
+evidence until they are reconciled with the current fleet trace. They do not authorize
+implementation by themselves.
+
+Before delegating, accepting, or implementing work on an active product surface:
+
+1. Identify the current lane owner/manager from fleet state and recent chat.
+2. Read the owner's current thread forward through the latest correction or approved
+   endpoint. Do not stop at the first plausible specification.
+3. Classify every proposed input as current, superseded, evidence-only, or unresolved.
+4. Confirm that the requested work is not already in progress, completed differently,
+   or explicitly rejected today.
+5. Give implementers source anchors to the current trace and owner, plus an explicit
+   `do-not-import` list for stale material.
+
+If the current owner or corrected endpoint cannot be established, the lane is blocked
+for implementation. Recover the trace or ask the owning role; do not choose an older
+document because it is available. A coordinator who receives a bad brief owns detecting
+and repairing the brief before anyone changes code.
+
+Coordinators keep routine work moving through verification and merge. Do not turn normal
+progress into an approval queue or ask Skip to micromanage. Stop for him only when a real
+product decision, conflict, destructive action, or user-only authority boundary requires
+it. If work appears exhausted, first check every live owner and open task, collect current
+status, unblock or redelegate stalled lanes, and merge verified routine work.
+
+This gate is especially strict for UI work: a stale design document must never override
+the current manager, today's browser-visible surface, or corrections made in today's
+conversation.
+
+## FLEET OPERATIONS ARE EVENT-BASED
+
+Spawn, wake, and delegation create durable obligations and complete through later events.
+They are not synchronous ten-second workflows. A short RPC/send timeout must not turn a
+valid queued operation into coordinator retry work or justify spawning around the failure.
+Track the durable mailbox/task event, and fix delivery if the promised completion or failure
+event never arrives. A fresh seat must have its ledger entry before wake/resume reads it, and
+spawn is not successful until the real prompt reaches the real agent.
 
 ## A PLAN IS THE SPECIFIC HOW FOR EVERY ITEM — do not make Skip explain this.
 
