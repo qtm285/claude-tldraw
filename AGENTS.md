@@ -447,17 +447,17 @@ The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `sessi
 
 **Stuck testing the app? Tell the `app-testing` agent — don't flail.** Playwright problems, dev-server issues, login/auth snags, or anything else blocking you from driving the app to test a change: don't burn time fighting the harness. Message the agent named `app-testing`; that's their domain.
 
-**Drive the browser with `tlda-dev pw` — one shared browser with per-agent tabs.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a single persistent browser. Each agent gets its own tab inside that shared browser, selected atomically under the wrapper's lock before each forwarded verb. You never `open`/`close`, never manage tabs yourself, and never pick a `-s=` session — that lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
+**Drive the browser with `tlda-dev pw` — a bounded shared-browser pool with per-agent tabs.** `tlda-dev pw <verb>` is `playwright-cli <verb>` wrapped around a persistent browser session assigned to the agent. Each agent gets its own tab inside its assigned session, selected atomically under that session's lock before each forwarded verb. Agents assigned to different sessions can run concurrently; agents sharing a session queue at verb granularity. You never `open`/`close`, never manage tabs yourself, and never pick a `-s=` session — that lifecycle churn is what `tlda-dev pw` exists to kill. Playwright MCP is gone; don't use `mcp__playwright__*`.
 
 ```bash
-tlda-dev pw acquire                 # pop the shared browser (lazy) + ensure your tab
+tlda-dev pw acquire                 # pop your assigned shared browser (lazy) + ensure your tab
 tlda-dev pw goto "URL" ; tlda-dev pw click <ref> ; tlda-dev pw screenshot --filename f ; tlda-dev pw eval "() => expr"
-tlda-dev pw status                  # shared browser + your tab + current URL
-tlda-dev pw release                 # close/park your tab (browser stays up for others)
-tlda-dev pw reap                    # close the shared browser (the reaper)
+tlda-dev pw status                  # assigned browser + your tab + current URL
+tlda-dev pw release                 # close/park your tab (browser stays up for others in the session)
+tlda-dev pw reap                    # close your assigned shared browser (the reaper)
 ```
 
-The wrapper serializes forwarded verbs with the existing `bin/pw-lock.sh`, selects your tab, runs the verb, and releases quickly. **Skip's machine still can't handle two concurrent playwright browser sessions** — that's why there is one shared browser, with cheap per-agent tabs inside it.
+The wrapper assigns agents deterministically across `TLDA_PW_CAPACITY` sessions (default 3). It serializes forwarded verbs with `bin/pw-lock.sh` only within the assigned session, selects your tab, runs the verb, and releases quickly. If capacity is full for your session, the lock/status output names the holder and pid/age instead of silently implying the browser is unavailable.
 
 Per `src/main.tsx`, automated sessions get `tlda-theme=fog-dark` + `tlda-camera-linked=false` set in localStorage on app startup. **Detection: `navigator.webdriver` OR `?pw=1` in the URL.** Always include `&pw=1` in your `tlda-dev pw goto` URLs. This means:
 - Playwright windows are dark theme (not a white flash on Skip's screen at night)
