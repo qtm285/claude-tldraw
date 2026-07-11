@@ -57,6 +57,11 @@ Agents constantly claim "my JSONL got reaped" or "the session handle is gone." *
 
 When Skip tells you what is wrong ("it's the daemon," "it worked until last night," "this is a systems problem"), treat it as **ground truth** and go find the mechanism that makes it true. Do **not** argue it isn't true, offer a competing theory, or act like he's mistaken. His lived observation of the running app beats your code-reading and your tests **every time** — if your investigation contradicts him, you are looking in the wrong place, so keep digging. The "well, actually / but / have you considered" reply to a Skip problem-statement is the failure. Accept it, then confirm by acting.
 
+**Work the failure Skip is experiencing, not an adjacent bug you found.** The current
+browser-visible behavior is the repro surface. Finding and fixing a nearby defect does not
+close the report. Instrument and prove the exact failing path Skip named, and stop speculative
+fallbacks or side quests when he corrects the target.
+
 ## GROUND TRUTH: IF YOU'RE GIVEN A SOURCE ARTIFACT, LOOK AT IT
 
 **When a task hands you a reference — an image, a screenshot, a file, a doc — open it and actually look at it before you act.** Don't work off a secondhand text description of what it contains, and don't assume existing/shipped code already captures it. A description of an artifact is not the artifact. This applies to design work exactly as much as to code: if Skip attached a reference image, fetch and view that image before producing anything that's supposed to be grounded in it.
@@ -151,6 +156,12 @@ The viewer uses the same `html-page` shape and iframe machinery as HTML/Quarto p
 **tlda is a tool for mathematicians who do math and don't write software.** Do not impose software-developer preferences on it. Most software like this is built by and for developers; this audience is the opposite — they use voice and touch (the primary user has RSI), they read and annotate math, they don't want keyboard-centric affordances, dense developer chrome, capability/permission systems, or loud notifications. When you make a design or UX decision, default to what serves a non-coding mathematician, not what a developer would prefer. Agents consistently default to developer-centric design — that default is the bug.
 
 **This is a voice-and-touch-first application.** Do not propose keyboard shortcuts as primary access points for features. The primary user has RSI and uses voice input and iPad touch — keybindings are inaccessible. When designing UI access patterns, use toolbar buttons, touch targets, or voice commands. A keybinding may exist as a secondary path but never as the primary or only trigger.
+
+**Nontechnical task and status surfaces are not database dumps.** Use friendly names,
+readable local dates, honest labels, and useful defaults. Raw ids and other internal fields
+belong in hover or detail only when they help. Verify the rendered surface itself: if it
+visibly clips, it is clipped, regardless of wrapper metrics. Use the normal document
+embedding path instead of inventing a custom iframe or shape.
 
 ## Multi-Machine Architecture — No Local Fallbacks
 
@@ -249,6 +260,11 @@ Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-
 Browser/UI tests that create fleet shapes in a real document room must clean up every shape and anchor they create before exiting. Do not leave test identities, alien-device shapes, or generated fleet layouts in shared rooms like `bregman`; persisted room pollution makes real review sessions look like multiple layouts are fighting each other.
 
 **Phone fleet layout sizing.** The phone default layout uses three horizontal full-screen snap lanes: agents/inbox, chat, and document. The **chat panel itself** is one phone viewport wide and one phone viewport tall; the agents/inbox lane sits immediately to its left with the same lane width and total height. The document lane is one viewport to the right of chat. Do not make a combined agents+inbox+chat footprint define the snap size — each lane owns one viewport-width stop.
+
+**Phone behavior comes from the selected phone layout, not device detection.** Do not add
+product rules keyed to Skip's device id, viewport identity, or a guess that a session is
+"the user's phone." Existing device-specific paths may remain only when they already have
+a documented reason; new pane and layout behavior must be driven by the selected layout.
 
 **Incidental, tolerated issue — junk human identities.** The WS `register` handler (`server/unified-server.mjs`) stores whatever `id` the client sends, verbatim. The production identity flow (`registerHuman`) always sends `fleet:<sanitized-name>`, but **test scripts call `register` directly with arbitrary ids** (numeric floats like `2.0`, `7.0`, `261710.0`), creating human-agent rows whose id is not `fleet:`-prefixed. A session that logs in as one of those test names gets the malformed id, and fleet shapes it creates get that id as their `userId`.
 
