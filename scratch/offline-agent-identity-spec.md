@@ -210,3 +210,11 @@ Its only specialization is the break-glass permission profile and immediate
 terminal attachment. It must not reserve a shell first, mint its own identity,
 or maintain a second launch/binding protocol. A structural regression test must
 enforce this shared-path rule.
+
+## Deferred live verification
+
+Cross-daemon mapping is implemented and unit-tested, but Air↔Mini policy wiring
+and live cross-daemon spawning are intentionally deferred until that workflow is
+needed. Before enabling it, configure both destination daemons' `remoteGrants`
+maps and verify a real spawn in each direction. This does not block the local
+mint, permission inheritance, wake, login, or Doctor YOLO acceptance cases.
