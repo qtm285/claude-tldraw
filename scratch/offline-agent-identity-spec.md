@@ -63,6 +63,32 @@ One row per local agent, keyed by `local_agent_id`:
 The recipe describes how to create the next local process. PID and liveness are
 observed from tmux and are not durable ledger fields.
 
+### Spawn authority across boxes
+
+Permission profiles are daemon-local: they name concrete paths and operations
+on one box. The server never interprets them or grants permission.
+
+Each daemon may explicitly grant known agent IDs a local profile. Agents minted
+later cannot all be enumerated in configuration, so their grants are inherited
+and written lazily to that daemon's ledger when they first spawn a child there.
+
+For a cross-box spawn, the server faithfully forwards the requester's
+`server_agent_id`, source daemon ID, and source daemon's permission class. The
+destination daemon owns a mapping from `(source daemon, source permission
+class, optional agent ID)` to a destination-local profile. It resolves and
+persists the requester's destination-local grant before authorizing the child.
+The server stores no filesystem policy and performs no permission comparison.
+
+A child grant is the intersection of the requested child profile, the model
+ceiling, and the requester's destination-local grant, so it cannot exceed the
+requester. The resulting child grant is persisted under the child's stable
+agent ID, so wake preserves it and later spawns cannot escalate it.
+
+Therefore the logical permission relation is sparse `(agent, box)` state:
+explicit configuration supplies roots; successful delegation supplies durable
+descendant rows. An agent with neither an explicit nor inherited grant on a box
+cannot spawn there.
+
 ### Mint requests
 
 Mint requests are transient operations, not identities and not join keys for
@@ -174,6 +200,10 @@ The implementation is acceptable only if automated and real-surface tests show:
 9. Doctor YOLO can mint and use a local CLI agent while disconnected, then
    bind that same agent once to the server without losing its conversation,
    process recipe, permissions, or ability to wake.
+10. a remote agent can spawn on another box only through that destination's
+    configured source-class mapping; the derived grant is persisted locally;
+    child grants cannot exceed it; and the server merely forwards the
+    authenticated identity/daemon/class tuple.
 
 Doctor YOLO must call the same local-mint primitive as ordinary local creation.
 Its only specialization is the break-glass permission profile and immediate
