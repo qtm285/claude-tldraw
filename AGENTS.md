@@ -327,11 +327,13 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Server URL resolution:** the active config in `~/.config/tlda/config.json` selects a named entry from `configs` using `defaultConfig` (or `TLDA_CONFIG`). `getServerUrl()` in `shared/config.mjs` returns that active config's `store.http`; `getFleetServerUrl()` returns `database.http`. Config entries are complete `{ database, store, licenseKey }` records, and a missing config or missing field fails loudly — there is no localhost fallback in the resolver. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
+**Server URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/daemon.yaml`'s `servers:` map. The active server is named by `defaultServer` (or `TLDA_CONFIG`). Each `servers:` entry is `{ database, store }` (a bare `url` is accepted as both); `licenseKey` is a shared top-level daemon.yaml key. `getServerUrl()` returns the active server's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing server or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
 
-**Split database/store config:** The current split is the active config's `database` axis for fleet/chat/registry/agents and `store` axis for doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; update the active config instead.
+**config.json is retired.** Server selection lives in `daemon.yaml servers:`, bots in `bots.yaml`, tokens in `~/.config/tlda/tokens.json` (or `TLDA_TOKEN`/`TLDA_TOKEN_READ` env), machineId in `daemon.yaml`. Secrets never live in a config file. There are no config.json fallbacks — every resolver reads the daemon config and fails loud.
 
-**Testing against an alternate server — use `--config`, never edit `defaultConfig`.** `~/.config/tlda/config.json` holds a `configs` map of named complete configs (each a `{ database, store, licenseKey }` pair = one server) and a `defaultConfig` naming the active one. `defaultConfig` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate config for that run only:
+**Split database/store config:** The active server's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `daemon.yaml servers:` instead.
+
+**Testing against an alternate server — use `--config`, never edit `defaultServer`.** `~/.config/tlda/daemon.yaml` holds a `servers:` map of named servers (each a `{ database, store }` entry) and a `defaultServer` naming the active one. `defaultServer` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate server by name for that run only:
 
 ```bash
 tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
@@ -339,7 +341,7 @@ TLDA_CONFIG=wmtry tlda agent create …    # env form, same effect
 tlda daemon start --config wmtry         # the daemon + every agent it spawns target wmtry
 ```
 
-The config **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `defaultConfig` to test an alternate server**: that's the 6/27 failure — a stray `defaultConfig: "wmtip"` (a WM-test leftover) routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. Two guards now make that loud instead of silent: any process whose explicit `TLDA_SERVER` disagrees with its active config **throws at startup** (`assertServerCoherence` in `shared/config.mjs`), and the running daemon **exits (→ launchd relaunch)** if `config.json` is edited so its active config no longer matches the origin it's connected to.
+The server **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `defaultServer` to test an alternate server**: that's the 6/27 failure — a stray `defaultServer: "wmtip"` (a WM-test leftover) routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. Two guards now make that loud instead of silent: any process whose explicit `TLDA_SERVER` disagrees with its active server **throws at startup** (`assertServerCoherence` in `shared/config.mjs`), and the running daemon **exits (→ launchd relaunch)** if `daemon.yaml` is edited so its active server no longer matches the origin it's connected to.
 
 ### Live deploy and old publishing machinery
 
