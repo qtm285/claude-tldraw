@@ -9,7 +9,7 @@
   not using. Do not disturb his active document. If testing fleet UI, use the default
   layout showing real fleet activity.
 
-<!-- lane:auto:start lane=app hash=73d9226fc017 -->
+<!-- lane:auto:start lane=app hash=f90da080926e -->
 <!-- Auto-generated guidance for this project. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). -->
 ## App-development guidance (tlda/app lane)
 
@@ -41,16 +41,27 @@ Done is two things. Neither is "it has tests."
    something outside your scope seems necessary, raise it separately — don't
    smuggle it in. Feature work stays in a worktree.
 
-### Do not write unit tests, and never block a fix on tests
+   A refactor changes structure and preserves the intended product contract. It
+   may expose and repair a concrete bug by deleting the unnecessary path, state,
+   fallback, or special case that causes it. It may not add a new mechanism or
+   invent a product behavior and call that a bug fix. If it increases complexity
+   or breaks the app, it is the wrong task regardless of the tests attached.
+
+If Skip asked for a live fix, the task includes integration and deployment.
+Do not stop at implemented, reviewed, approved, committed, or built. Carry the
+requested change to the live app, then watch that surface and rollback or repair
+immediately if it is wrong. If he did not ask for the change, do not deploy it.
+
+### Testing never decides what ships
 
 No CI runs them, so they gate nothing. They are either trivial or written after a
 human already found the bug, and then they rot into tripwires that fail the
-moment someone makes the app *correct*. Agents wrestling broken test harnesses is
-exactly what keeps easy fixes from shipping — that is theater, and it is what has
-been hurting Skip. **Verify by driving the real surface, not by adding
-assertions.** An easy fix that isn't landing because tests "don't pass" — ship the
-fix, drive the surface, done. "It has tests" never buys a merge; never demand
-tests as the price of one.
+moment someone makes the app *correct*. Agents wrestling broken test harnesses
+keeps requested work from ever reaching Skip while unrequested changes pass
+through under enough ceremony. **The literal request decides what ships.**
+Requested work goes live; unrequested work does not. Tests, reviews, previews,
+and reports cannot reverse either decision. Verify requested work on the live
+surface after deployment; rollback or repair if it is wrong.
 
 ### When you can't reach the behavior, don't fake proof
 
@@ -58,10 +69,11 @@ Before a preview counts as evidence, confirm it is real: the bundle is loaded, t
 exact control exists, the assets/endpoints resolve, the console is clean. A
 harness with missing assets, no composer, voice off, or console errors **cannot
 produce evidence** — piling on setup just builds a fancier fake, and that is a
-blocker, not progress. If the supported automation genuinely can't exercise the
-thing, say so immediately, stand up the supported server, and ask Skip for **one
-bounded test** — exact URL, one action, one expected result. He tests when truly
-blocked. The manufactured substitute is the failure; the honest ask is not.
+blocker to the claim, not to deployment of requested work. If supported
+automation genuinely can't exercise the thing, say so immediately and ask Skip
+for **one bounded test** — exact URL, one action, one expected result. A few
+seconds of real contact is cheaper than building hours of proxy ceremony. The
+manufactured substitute is the failure; the honest ask is not.
 
 Graduate your claims: say the rung you actually reached — *implemented*,
 *locally tested*, *preview-tested*, *deployed*, *user-visible verified*. Never say
@@ -82,14 +94,17 @@ Graduate your claims: say the rung you actually reached — *implemented*,
 - **No silent fallback, no swallowed/log-only error.** Recover through the
   supported path or surface the failure on the real error surface.
 
-### Managers do not add gates
+### Managers compare the change to the request
 
-Move an authorized fix to the real surface; do not hold it behind unit tests,
-flip-book reports, extra reviewers, or a second approval because Skip will see
-it. Give implementers the configured app-development permissions their task
-needs — do not request a narrower `wd` profile and then invent machinery around
-the resulting denial. Read the actual diff and the real-surface evidence; reject
-drive-bys and fake proof, not working fixes without ceremony.
+Read Skip's instruction, then read the actual diff and behavior. If they match,
+move the change through integration and deployment without inventing a new
+review, rebuild, report, approval, or status pause. If they do not match, reject
+the change regardless of how many tests or reviewers it has. Do not pass along
+an implementer's preferred substitute because it arrived wrapped in ceremony.
+
+Give implementers the configured app-development permissions their task needs —
+do not request a narrower `wd` profile and then invent machinery around the
+resulting denial.
 
 ### Who to ask
 
