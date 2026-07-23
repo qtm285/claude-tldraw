@@ -213,7 +213,6 @@ If you're handed a to-do list, a plan describes **specifically how you will do e
 | Build status | `tlda doc status <name>` |
 | LaTeX errors | `tlda doc errors <name>` |
 | Push files manually | `tlda doc push <name> --dir /path/to/project` |
-| Publish snapshot | `npm run publish-snapshot -- doc-name` |
 
 **`tlda daemon start`** runs the per-machine **fleet-daemon** (`bin/fleet-daemon.mjs`), which watches every project's source directory AND every Claude Code session JSONL on this machine, pushing events (source changes, activity cards, terminal-user chat) to the tlda server over a single WebSocket. The server tells the daemon what to watch via a `daemon-welcome` message and pushes `projects-updated` when new projects are created — no polling needed. `tlda daemon start` is an alias for the same command. The daemon also handles tmux RPCs (interrupt, send-key, capture-pane, restart-mcp, kick) routed by `machine_id`.
 
@@ -418,7 +417,11 @@ Author's machine                     Server (localhost or remote, port 5176)
 
 **Server URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/daemon.yaml`'s `servers:` map. The active server is named by `defaultServer` (or `TLDA_CONFIG`). Every `servers:` entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active server's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing server or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
 
-**config.json is retired.** Server selection lives in `daemon.yaml servers:`, bots in `bots.yaml`, tokens in `~/.config/tlda/tokens.json` (or `TLDA_TOKEN`/`TLDA_TOKEN_READ` env), machineId in `daemon.yaml`. Secrets never live in a config file. There are no config.json fallbacks — every resolver reads the daemon config and fails loud.
+**config.json is retired.** Server selection and build settings live in
+`server.yaml`; machine, permissions, models, tmux, and task-document settings
+live in `daemon.yaml`; bots live in `bots.yaml`; ordinary CLI preferences live
+in `cli.yaml`; tokens live in `~/.config/tlda/tokens.json` (or token env vars).
+Secrets never live in YAML. There are no generic config fallbacks.
 
 **Split database/store config:** The active server's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `daemon.yaml servers:` instead.
 
@@ -432,13 +435,10 @@ tlda daemon start --config wmtry         # the daemon + every agent it spawns ta
 
 The server **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `defaultServer` to test an alternate server**: that's the 6/27 failure — a stray `defaultServer: "wmtip"` (a WM-test leftover) routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. Two guards now make that loud instead of silent: any process whose explicit `TLDA_SERVER` disagrees with its active server **throws at startup** (`assertServerCoherence` in `shared/config.mjs`), and the running daemon **exits (→ launchd relaunch)** if `daemon.yaml` is edited so its active server no longer matches the origin it's connected to.
 
-### Live deploy and old publishing machinery
+### Live deploy
 
 The current `phi`/Fly live deploy path is documented in `docs/live-deploy.md`.
-Use `fly deploy -c fly.live.toml` after rebuilding the SPA. Do not use
-`tlda publish` for the live server; that is old snapshot/GitHub Pages machinery.
-
-`npm run publish-snapshot -- <doc>` syncs the working copy to `~/work/published/tlda/`, builds the viewer, and deploys to GitHub Pages + Fly. The published clone is a frozen snapshot — safe for the triage agent to read from while the working copy keeps changing.
+Use `fly deploy -c fly.live.toml` after rebuilding the SPA.
 
 The old `TLDA_SYNC_SERVER=... node cli/lib/triage-agent.mjs` path is no longer the documented model. Use the active config's database/store axes instead.
 
