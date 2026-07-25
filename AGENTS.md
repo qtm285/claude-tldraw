@@ -67,6 +67,41 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 
 Agents constantly claim "my JSONL got reaped" or "the session handle is gone." **THAT DOES NOT HAPPEN. IT IS NOT A THING.** The rollout / JSONL always exists on disk. When a respawn fails with "no resume handle," the cause is **our own shitty record-keeping losing the pointer** — never the data being deleted or reaped. Do not ever offer "the JSONL got reaped" as an explanation; it is false. Go find the session on disk instead.
 
+## GROUND TRUTH: AGENTS WAKE ON CHAT.
+
+**Sending a hibernating agent a chat message wakes it.** That is the mechanism, not a
+workaround for one. Chat is how an agent comes back.
+
+**So hibernation is transparent.** From the outside an agent is simply *there*: you chat,
+it answers, and whether it had to be woken is an implementation detail. Nothing that talks
+to an agent should branch on hibernation, check for it first, or treat it as a failure
+state. If your code asks "is this agent hibernating" before sending, that is the bug.
+
+**The one place hibernation is legitimately visible is as a filter label** — the `awake`
+and `hibernating` pseudo-labels, for selecting agents in a roster or a filter expression.
+That is the whole of its intended surface. Seeing it there is not licence to branch on it
+anywhere else.
+
+Consequences agents get wrong:
+
+- **A chat message to a hibernating agent is not shouting into the void.** It is the
+  supported way to bring that agent back to its work. Do not describe it as futile, and do
+  not build a second "wake" path beside it.
+- **A bot kicking an idle-or-hibernating agent that holds an open task is doing real work**,
+  because the kick itself is the wake. What must be true is that the agent really is idle
+  or gone — see the status caveat below.
+- The intended trigger is **idle with an open task, after a couple of minutes**, so an
+  agent usually never reaches hibernation holding unfinished work. The
+  hibernated-with-a-task case still exists legitimately: a task can be assigned *after* an
+  agent has already hibernated.
+
+**Status is the weak link, not the wake.** On 2026-07-25 `bots/todd/kicks.mjs` sent
+**1,505 "you hibernated with unfinished task" kicks in ~15,000 fleet events — 9.9% of all
+traffic, across 82 agents** — to agents that were mid-task, calling tools, and reporting
+every few minutes. Todd was right to act on what it was told; it was told wrong. Before
+building anything on an agent's awake/idle/hibernating state, verify the state is real —
+and remember `trust the pane, not the roster`.
+
 ## GROUND TRUTH: ONE DAEMON. A SECOND DAEMON IS A BUG.
 
 **The core invariant: ONE DAEMON PER ENVIRONMENT.** This is **not** a global machine singleton — we run multiple environments/projects, and each legitimately has its own daemon. The rule is that **exactly one daemon watches a given project/environment** (equivalently: any one agent's JSONL is watched by exactly one daemon). **Two daemons watching the *same* environment** is the bug — that double-watch corrupts activity-card delivery and agent status, and the confused status can even get live agents reaped. So the lock must be **keyed on the environment**, not global: a second daemon for an environment already being watched must refuse to start. A stray daemon (from a worktree, a sandbox, a stray `node bin/fleet-daemon.mjs`) that ends up watching an already-watched environment breaks it — it is **NOT** harmless "because it's just a sandbox daemon."
