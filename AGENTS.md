@@ -429,6 +429,22 @@ So agents can `tail -f ~/.config/tlda/client.log` (or grep it) to see what the b
 
 The file is JSON-lines: `{"ts","level","ns","msg","data","session"}`. The `session` field is a short per-tab id so you can tell which window logged what.
 
+**A browser POSTs its logs to the server that served the SPA — so Skip's sessions are on
+Fly, never on the Mini.** The Mini's copy holds only agent tabs. Read the real one:
+
+```bash
+export FLY_ACCESS_TOKEN=$(cat ~/.fly/access-token)
+fly ssh console -c fly.live.toml -C "sh -c 'grep … /root/.config/tlda/client.log'"
+```
+
+That works from an agent shell — it is **not** an ops request. Two agents lost time on
+2026-07-25 concluding it was unavailable, because their shells had no token exported.
+
+**Gate every grep on the namespace first**: `grep '"ns":"chat-freeze"' … | grep -c 'FOO'`.
+`live-perf` samples serialise page content, and the page contains the fleet chat panels —
+so an ungated grep for a probe's message string matches **agents' own chat about the
+probe**. On 2026-07-25 that returned 40 hits for a probe that had fired zero times.
+
 **Tune the console threshold** via URL `?log=ns:debug` or `localStorage.setItem('tlda-log', 'chat-scroll:debug')`. The server sink captures everything regardless — the threshold only affects what shows in DevTools.
 
 **Use this everywhere.** Don't `console.log` from app code; use `log.debug/info/warn/error` so the event lands in the file. Server-side code uses `shared/logger.mjs` instead, which writes to per-process log files (`server.log`, `fleet-daemon.log`, etc.).
