@@ -11,10 +11,23 @@
 - **Don't drive a browser.** Skip: *"you guys are really bad at driving browsers. It burns
   a ton of tokens, and it takes forever. And it's just not effective."* Building a UI
   feature is the only reason, and then on a document he is not in.
+- **CHROME REMOTE DEBUGGING ON SKIP'S BROWSER IS ALWAYS ENABLED. USE IT.** It is app
+  tooling, not an ops request — nobody needs to turn it on and there is nothing to
+  arrange. Attach over CDP and read his live DOM, JS state, console, and network directly.
+  His tab is the one whose URL has **no `pw=1` and no `name=`**; every agent pw tab carries
+  both. Read-only: evaluate to observe, never to mutate — no clicking, filtering, deleting
+  shapes, or clearing storage, all of which destroy the live state you were sent to look at.
+  On 2026-07-25 an entire night was lost to inferring from logs — four confident wrong
+  explanations, two agents discarding screenshot evidence they couldn't attribute, an hour
+  spent on the wrong machine's `client.log`, and a "finding" that turned out to be a logging
+  default — while this was available the whole time and nobody used it. Skip: *"IT'S BEEN
+  ENABLED. IT'S ALWAYS ENABLED."*
 - **To see what he sees: `screenshot(doc, target: "screen")`.** To see what his tab logs:
-  `~/.config/tlda/client.log`. To see if it's slow for him: the client profiler on his
-  session. A browser you opened is a different machine in a different state — reporting it
-  back is reporting on yourself.
+  `~/.config/tlda/client.log` — **on the server, not the Mini**, if he is on the Air. To see
+  if it's slow for him: the client profiler on his session, or `src/livePerfProbe.ts`, which
+  already samples every tab every ~10s and carries `href` for attribution. A browser you
+  opened is a different machine in a different state — reporting it back is reporting on
+  yourself.
 - **A pw tab is a running browser, not a leftover file**, and `release` only *parks* it —
   a parked tab last on his document is still loaded on his document.
 - Almost nothing needs a browser. On 2026-07-25 the label-width bug was a diff and a
