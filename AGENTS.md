@@ -456,6 +456,9 @@ Available backends are selected by the saved `voice-backend` preference:
 
 Whisper and Deepgram bridges are lazy-started when their explicit backend is selected. If a backend is unavailable, voice stays off or reports that backend as unavailable; it must not substitute Chrome/Web Speech implicitly.
 
+**The Deepgram bridge runs on Fly, with the server — not on the Mini.** Agents keep
+theorising about it from the Mini's load; that is the wrong box.
+
 Whisper log: `~/.config/tlda/whisper-bridge.log`. Deepgram SDK log: `~/.config/tlda/deepgram-sdk-bridge.log`.
 
 ## Client Logging
