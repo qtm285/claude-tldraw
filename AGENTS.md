@@ -8,115 +8,33 @@
 - For agent PW testing, use the real environment with a different document—one Skip is
   not using. Do not disturb his active document. If testing fleet UI, use the default
   layout showing real fleet activity.
+- **Don't drive a browser.** Skip: *"you guys are really bad at driving browsers. It burns
+  a ton of tokens, and it takes forever. And it's just not effective."* Building a UI
+  feature is the only reason, and then on a document he is not in.
+- **To see what he sees: `screenshot(doc, target: "screen")`.** To see what his tab logs:
+  `~/.config/tlda/client.log`. To see if it's slow for him: the client profiler on his
+  session. A browser you opened is a different machine in a different state — reporting it
+  back is reporting on yourself.
+- **A pw tab is a running browser, not a leftover file**, and `release` only *parks* it —
+  a parked tab last on his document is still loaded on his document.
+- Almost nothing needs a browser. On 2026-07-25 the label-width bug was a diff and a
+  character count, the event-volume answer was one SQL query, "did this ever merge" was
+  `git log --oneline main..<branch>`, and the stall stacks came from his session.
 
-<!-- lane:auto:start lane=app hash=f90da080926e -->
-<!-- Auto-generated guidance for this project. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). -->
-## App-development guidance (tlda/app lane)
-
-This is the complete contract for agents building the tlda app. It is short on
-purpose. Read it, then do the work.
-
-### The one job
-
-Skip asks for a few minutes of real work. Do **that** — fix the thing he
-reported and confirm it actually works — and nothing else. He cannot type (RSI;
-he is on voice), so a broken app **physically hurts him** and every minute it is
-down costs him in real time. Your job is to give him back a working surface fast.
-Burying his small request in tests, previews, and process while he is blocked is
-not diligence — it is the failure.
-
-### What "done" means
-
-Done is two things. Neither is "it has tests."
-
-1. **The app works, and you watched it work on the real surface.** Open the thing
-   Skip actually uses and drive your change end to end — the site loads, the CLI
-   runs without throwing, the flow you touched does what it should, with your own
-   eyes. The **user-visible surface is the only authority**. A green build, a
-   hash, a sentinel string, a log line, a database row, a private/preview tab, an
-   injected synthetic event — all *diagnose*; none *prove* the app works, and none
-   outrank a failure Skip can see.
-2. **You did exactly what was asked — nothing else.** No new behavior, no changed
-   default, routing, onboarding, layout, sync, or visibility as a side effect. If
-   something outside your scope seems necessary, raise it separately — don't
-   smuggle it in. Feature work stays in a worktree.
-
-   A refactor changes structure and preserves the intended product contract. It
-   may expose and repair a concrete bug by deleting the unnecessary path, state,
-   fallback, or special case that causes it. It may not add a new mechanism or
-   invent a product behavior and call that a bug fix. If it increases complexity
-   or breaks the app, it is the wrong task regardless of the tests attached.
-
-If Skip asked for a live fix, the task includes integration and deployment.
-Do not stop at implemented, reviewed, approved, committed, or built. Carry the
-requested change to the live app, then watch that surface and rollback or repair
-immediately if it is wrong. If he did not ask for the change, do not deploy it.
-
-### Testing never decides what ships
-
-No CI runs them, so they gate nothing. They are either trivial or written after a
-human already found the bug, and then they rot into tripwires that fail the
-moment someone makes the app *correct*. Agents wrestling broken test harnesses
-keeps requested work from ever reaching Skip while unrequested changes pass
-through under enough ceremony. **The literal request decides what ships.**
-Requested work goes live; unrequested work does not. Tests, reviews, previews,
-and reports cannot reverse either decision. Verify requested work on the live
-surface after deployment; rollback or repair if it is wrong.
-
-### When you can't reach the behavior, don't fake proof
-
-Before a preview counts as evidence, confirm it is real: the bundle is loaded, the
-exact control exists, the assets/endpoints resolve, the console is clean. A
-harness with missing assets, no composer, voice off, or console errors **cannot
-produce evidence** — piling on setup just builds a fancier fake, and that is a
-blocker to the claim, not to deployment of requested work. If supported
-automation genuinely can't exercise the thing, say so immediately and ask Skip
-for **one bounded test** — exact URL, one action, one expected result. A few
-seconds of real contact is cheaper than building hours of proxy ceremony. The
-manufactured substitute is the failure; the honest ask is not.
-
-Graduate your claims: say the rung you actually reached — *implemented*,
-*locally tested*, *preview-tested*, *deployed*, *user-visible verified*. Never say
-"done" or "you can stay out of it" below the top rung.
-
-### The corrections Skip should never have to repeat
-
-- **When he says it's broken, it's broken.** A contradiction from Skip voids every
-  prior "success" report until you reconcile it on that same surface. Don't
-  dismiss his report because your repro passed.
-- **When corrected, stop.** Don't ship a faster or longer version of what was just
-  rejected. Discard the rejected object — a patch that fixed a diagnostic case but
-  broke the intended behavior is reverted, never the base for the next patch.
-- **After a bad release, stop stacking.** Decide revert-or-not, measure the live
-  regression, get back to the last contract Skip accepted — before any new work.
-- **Stay present while he is talking.** Don't manage Skip out of a live incident,
-  and don't disappear into background work; continue when he releases you.
-- **No silent fallback, no swallowed/log-only error.** Recover through the
-  supported path or surface the failure on the real error surface.
-
-### Managers compare the change to the request
-
-Read Skip's instruction, then read the actual diff and behavior. If they match,
-move the change through integration and deployment without inventing a new
-review, rebuild, report, approval, or status pause. If they do not match, reject
-the change regardless of how many tests or reviewers it has. Do not pass along
-an implementer's preferred substitute because it arrived wrapped in ceremony.
-
-Give implementers the configured app-development permissions their task needs —
-do not request a narrower `wd` profile and then invent machinery around the
-resulting denial.
-
-### Who to ask
+## Who to ask
 
 - **app-librarian** — architecture, source location, logs, tool behavior, intended
   tlda/fleet behavior.
 - **app-historian** — prior app decisions, old bug history, what changed and why.
-- **app-tester** — browser verification, screenshots, interaction testing, repros.
-- **ops** — machine, deploy, server, auth, daemon, infrastructure.
+- **app-tester** (fallback: `app-testing`) — browser verification, screenshots,
+  interaction testing, repros.
+- **ops** — the physical machine, deploy pipeline, daemon/process supervision, auth.
+  Not a catch-all for "the app is broken" — that's your job to fix. Only bring in
+  ops when the problem is genuinely outside app-dev's reach (machine down, network,
+  process supervision).
 - **math-librarian** or the assigned math agent — paper content or math judgment.
-<!-- lane:auto:end -->
 
-**No backward compatibility.** Do not keep deprecated aliases, compatibility shims, or old command paths unless Skip explicitly asks for them.
+**No backward compatibility.** Do not keep deprecated aliases, compatibility shims, old command paths, or migration layers unless Skip explicitly asks for them. When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt.
 
 **Keep working notes in scratch, not the repo.** Status briefs, drafts, plans, and other ephemeral working artifacts go in a scratch folder (the project `scratch/` or your session scratchpad) — not the repo root or committed docs. Untracked files don't dirty the index or block a deploy, but they clutter the tree; keep it tidy. Durable, verified documentation goes in the proper docs; everything working-and-temporary goes in scratch.
 
@@ -141,6 +59,42 @@ Agents constantly claim "my JSONL got reaped" or "the session handle is gone." *
 **The core invariant: ONE DAEMON PER ENVIRONMENT.** This is **not** a global machine singleton — we run multiple environments/projects, and each legitimately has its own daemon. The rule is that **exactly one daemon watches a given project/environment** (equivalently: any one agent's JSONL is watched by exactly one daemon). **Two daemons watching the *same* environment** is the bug — that double-watch corrupts activity-card delivery and agent status, and the confused status can even get live agents reaped. So the lock must be **keyed on the environment**, not global: a second daemon for an environment already being watched must refuse to start. A stray daemon (from a worktree, a sandbox, a stray `node bin/fleet-daemon.mjs`) that ends up watching an already-watched environment breaks it — it is **NOT** harmless "because it's just a sandbox daemon."
 
 **Troubleshooting rule (this project):** if **activity cards or agent status** are wrong — cards not showing, status stuck/wrong, live agents shown dead — **FIRST run `pgrep -fl fleet-daemon` and check whether more than one daemon is running.** If there are two, kill the stray (non-launchd) one; launchd keeps the real singleton alive. Do **not** rationalize a second daemon away — "the other one is just a sandbox daemon, it doesn't matter" is exactly the wrong call. It matters.
+
+## LAUNCHD IS ALREADY SET UP. DON'T TOUCH IT.
+
+These jobs exist in `~/Library/LaunchAgents` and are registered:
+
+```
+com.tlda.fleet-daemon          # the testing-environment daemon
+com.tlda.fleet-daemon.stable   # the stable-environment daemon
+com.tlda.bot.dev  com.tlda.bot.grammar  com.tlda.bot.teacher  com.tlda.bot.todd
+```
+
+**Unless you are creating a new environment, leave them alone.** Do not edit a plist, do
+not rewrite one, do not back one up and install a replacement. Skip: *"we have no need to
+do that ever."*
+
+Why this is a rule and not a preference: an edited plist has to be re-registered to take
+effect, `launchctl bootstrap` **fails from every agent shell** (`5: Input/output error` —
+agent processes are in the Background session and can't write to `gui/501`), so the agent
+hands Skip a command. Four plist rewrites are backed up in that directory, and the
+bootstrap instruction is copied across a dozen scratch files. That loop is why he gets
+told to fuck around with the daemon.
+
+**What you CAN do, and should, instead of asking him:**
+
+- `launchctl kickstart gui/501/com.tlda.fleet-daemon` — **works from an agent shell.**
+  Restarting a registered job is yours. Add `-k` to kill and restart.
+- Change daemon behaviour in `~/.config/tlda/daemon.yaml`, which the daemon reads at
+  startup. No registration involved.
+- `pgrep -fl fleet-daemon` to see what's running, and `ps eww <pid> | tr ' ' '\n' | grep
+  TLDA_CONFIG` to see which environment a daemon serves.
+
+**If a daemon won't start, read `~/.config/tlda/fleet-daemon.log` before anything else.**
+It dies silently on config validation — on 2026-07-25 a deploy added code requiring
+`statusScanSeconds` in `daemon.yaml`, the key was absent, and the daemon threw at startup
+while its launchd job sat at `spawn scheduled` with nothing running. Restarting it without
+reading the log tells you nothing.
 
 ## When Skip states the problem, that is the starting axiom — not a claim to debate.
 
@@ -202,17 +156,9 @@ spawn is not successful until the real prompt reaches the real agent.
 
 If you're handed a to-do list, a plan describes **specifically how you will do every single item on it.** A 60-item list gets a 60-item plan — **one concrete disposition per item**, not grouped, not collapsed into "we'll handle these." **"I'll look at the list and do the things" is not a plan. A plan never refers to another plan.** And here is the part agents keep skipping: these lists have been left to **rot** by every agent who confidently asserted they'd "take care of it." So an assertion that you'll accomplish what no one before you has is worthless on its own — your plan must state **what you will do *differently*** so it doesn't rot the same way. Never hand Skip a confident "I've got it" without a concrete, *different* mechanism behind it. Making him explain what a plan is, or that he'll hold you accountable to it, is a failure.
 
-## Quick Reference
+## CLI Notes
 
-| Task | Command |
-|------|---------|
-| **Start the server** | `tlda server start` |
-| **Start the fleet daemon** | `tlda daemon start` |
-| **Open in browser** | `tlda doc open <name>` |
-| List projects | `tlda doc list` |
-| Build status | `tlda doc status <name>` |
-| LaTeX errors | `tlda doc errors <name>` |
-| Push files manually | `tlda doc push <name> --dir /path/to/project` |
+Run `tlda --help` / `tlda <noun> --help` for the command list — don't duplicate it here.
 
 **`tlda daemon start`** runs the per-machine **fleet-daemon** (`bin/fleet-daemon.mjs`), which watches every project's source directory AND every Claude Code session JSONL on this machine, pushing events (source changes, activity cards, terminal-user chat) to the tlda server over a single WebSocket. The server tells the daemon what to watch via a `daemon-welcome` message and pushes `projects-updated` when new projects are created — no polling needed. `tlda daemon start` is an alias for the same command. The daemon also handles tmux RPCs (interrupt, send-key, capture-pane, restart-mcp, kick) routed by `machine_id`.
 
@@ -220,7 +166,7 @@ If you're handed a to-do list, a plan describes **specifically how you will do e
 
 **IMPORTANT: Always use `tlda server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `tlda server stop` to stop, `tlda server status` to check.
 
-**If something goes wrong in a Claude session** (services won't start, build fails, viewer not loading, ports in use), delegate to the **ops agent** (`subagent_type: "ops"`). It knows the full build pipeline, service architecture, health checks, and common fixes. This is a Claude Agent-tool target; non-Claude agents should use their available tlda/fleet tools or ask for an ops handoff instead of pretending the `ops` subagent exists in their harness.
+**If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda doc errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
 
 ## Markdown Format
 
@@ -278,7 +224,7 @@ Signals are custom messages piggybacked on the Yjs WebSocket via `broadcastSigna
 Examples:
 - `signal:reload` — triggers page reload after a build; self-correcting because the new SVG files are already on disk, a tab opened later will just load the current version
 - `signal:build-status` — drives build progress pills; self-correcting because pills are ephemeral UI
-- `signal:camera` / `signal:scroll` — presenter sync; self-correcting because the next camera move updates it
+- `signal:camera-link` / `signal:scroll-to-element` — presenter sync; self-correcting because the next camera move updates it
 
 ### The principle
 
@@ -287,10 +233,6 @@ Examples:
 ### Missed-reload detection
 
 Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
-
-## No Backward Compatibility
-
-**Do not add backward-compat shims, fallbacks, or migration layers.** When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt. No old-param fallbacks, no "accept both formats," no compatibility cruft.
 
 ## TLDraw-Native UI Rule
 
@@ -385,8 +327,7 @@ cli/
 
 src/                           # Viewer SPA (React + TLDraw)
 ├── SvgDocument.tsx            # SVG page loading, layout, reload handling
-├── MathNoteShape.tsx          # KaTeX-enabled sticky notes
-├── ProofStatementOverlay.tsx  # Proof reader overlays
+├── shapes/MathNoteShape.tsx   # KaTeX-enabled sticky notes
 ├── useYjsSync.ts              # Signal helpers layered on sync
 ├── synctexAnchor.ts           # Source-anchored annotation resolution
 └── svgDocumentLoader.ts       # Document loading, manifest, proof-info
@@ -451,134 +392,13 @@ tlda-dev serve <branch>       # Vite dev server for a branch/worktree
 tlda-dev sandbox <branch>     # isolated backend + DB + projects + Vite for risky server/shape changes
 ```
 
-## Math Notes
-
-Press `m` or click the note tool to create a math note.
-
-Syntax:
-- `$x^2$` - inline math
-- `$$\int_0^1 f(x) dx$$` - display math
-
-Custom macros from the paper's preamble are automatically available (e.g., `$\E[X]$`, `$\chis$`).
-
-## iPad Review via MCP
-
-### Starting a session
-When the user asks to review or view a paper (e.g. "let's review this", "review bregman", "pull up the paper"):
-
-1. Make sure the server is running: `tlda server start`
-2. Start the fleet daemon: `tlda daemon start`
-3. Open in browser: `tlda doc open <name>`
-
-**If you'll be doing other work while the doc is open** (editing code, running sims, writing), subscribe to feedback with the **`monitor_add`** MCP tool — new annotations arrive as fleet chat from `fleet:tlda`, the same channel as any other message.
-
-For an **iPad review session** (dedicated to review, not multitasking):
-1. Print a QR code: `node -e "import('qrcode-terminal').then(m => m.default.generate('https://IP:5176/?doc=DOC', {small: true}))"`
-   - Get IP from `ifconfig | grep 'inet 100\.'` (Tailscale) or LAN
-2. Open the tex file in Zed: `open -a Zed /path/to/file.tex`
-3. Subscribe with `monitor_add(doc)` so feedback reaches you on the channel.
-
-### Listening for feedback
-
-Use the **`monitor_add` / `monitor_remove` / `monitor_list` MCP tools**. `monitor_add(doc)` subscribes you to a document; new annotations, pings, and drawn shapes arrive as **fleet chat from `fleet:tlda`** — no hook, no polling, and it reaches you whether you're busy or idle (the channel works either way). When feedback arrives, read the details with `read_annotations(doc)`.
-
-### Reading annotations
-- `read_annotations(doc)` — all annotations: math notes, highlighter strokes, pen strokes, arrows, geo, text. Source-line anchored. Filter by `type`, `since`, `startLine`/`endLine`, `unaddressed_only`. Sort by `document` (default) or `time`.
-
-### Responding
-- `add_note(doc, line, text, file?)` — persistent math note anchored to a source line
-- `reply_note(doc, id, text)` — reply to an existing note when that MCP tool is available
-- `flash_location(file, line)` — flash a red circle at a source line
-- `scroll_to_line(doc, line, file?)` — scroll viewer to source line
-- `delete_annotation(doc, id)` — remove a note (or any annotation shape)
-- `screenshot(doc, target)` — capture viewer (target: viewport / screen / annotation ref / explicit bounds)
-
-**Multi-file projects:** For documents that use `\input{}`/`\include{}`, pass the `file` parameter (e.g. `file="appendix.tex"`) to target lines in input files. Without `file`, tools default to the main tex file. The `lookup.json` keys input file lines as `"filename.tex:N"`.
-
-### Note replies
-Some Claude MCP surfaces expose `reply_note(doc, id, text)` for responding to notes. The current viewer does **not** have the old note-threading tab UI: do not describe numbered tab handles, merge-by-drag, or detach-tab behavior unless you have reverified that UI in the browser.
-
-The Notes tab in the panel may have sort/filter controls; verify the current browser-visible UI before describing exact controls to the user.
-
-### Cleanup
-- `delete_annotation(doc, id)` — remove a note or annotation shape
-
-### Review loop behavior
-When the user explicitly says they're reviewing a document with you — and reviewing is your primary task — subscribe with `monitor_add(doc)` and respond to feedback as it arrives on the channel:
-1. `monitor_add(doc)` — feedback (pen stroke, highlight, sticky, text selection, …) arrives as fleet chat from `fleet:tlda`.
-2. Call `read_annotations(doc)` to see the details of what came in.
-3. Scroll Zed to the relevant source line: `zed /path/to/file.tex:LINE`
-4. Respond — drop a note, reply, answer the question, edit tex, whatever's needed.
-
-Always keep Zed in sync: whenever you're discussing, highlighting, or responding to a specific source line, scroll Zed there with `zed file.tex:LINE`. This is the default behavior, not something the user should have to ask for.
-
-You don't "block and wait" — feedback reaches you on the channel whether you're mid-task or idle, so just keep working and handle it when it arrives. `monitor_remove(doc)` when you're done.
-
-### Diff review workflow
-
-When starting a review of a diff document (`format: "diff"` in manifest):
-
-1. **Populate summaries at session start.** Read `diff-info.json` and git diff to write a one-line summary per changed page:
-   - Read `public/docs/{doc}/diff-info.json` to get page pairs and the git ref
-   - Run `git diff {ref} -- {texfile}` in the tex repo to get the actual hunks
-   - Map hunks to pages using the line ranges in diff-info
-   - Write summaries to Yjs `signal:diff-summaries` via a Node one-liner:
-     ```bash
-     node -e "
-     import WebSocket from 'ws'; import * as Y from 'yjs';
-     const doc = new Y.Doc(); const ws = new WebSocket('wss://localhost:5176/DOC');
-     ws.on('message', d => Y.applyUpdate(doc, new Uint8Array(d)));
-     setTimeout(() => {
-       const m = doc.getMap('records');
-       doc.transact(() => m.set('signal:diff-summaries', {
-         summaries: { PAGE: 'summary text', ... }, timestamp: Date.now()
-       }));
-       setTimeout(() => { ws.close(); process.exit(); }, 500);
-     }, 1000);
-     "
-     ```
-   - Keep summaries short: ~35 chars for simple changes, bullets with `\n` for complex ones
-   - Focus on *what* changed semantically ("tightened bound in Prop 2.1"), not mechanically ("changed page 5")
-
-2. **Triage with the user.** The Changes tab shows three status dots per change:
-   - Blue = keep new version, Red = revert to old, Violet = discuss
-   - Review state syncs via Yjs and adjusts highlight opacity on canvas
-   - `n`/`p` keyboard shortcuts jump between changes with a pulse animation
-
-3. **Don't redo decided changes.** When summaries and triage state already exist (from a previous session or earlier in the current one), respect them. Only update summaries if the diff itself changes (reload signal clears both).
-
-### Viewing previous versions — what exists and what does NOT
-
-For a **normal `svg` doc** (e.g. `synth-supplement`), the **only** way to view an earlier version is the **shadow-history scrubber**: click the **version timestamp** in the corner to open a slim time-axis scrubber at the bottom of the canvas (`ShadowHistoryOverlay`), then drag/step to a past build — the old version renders as a "shadow column" beside the current one, fed by `/api/projects/{doc}/history/shadow` off the doc's shadow git repo.
-
-Things that **do NOT exist** — don't reference them to the user or look for them:
-- **No "compare" / "diff" button** on a normal doc. The Blue/Red/Violet Changes-tab diff workflow above exists *only* for docs created with `format: "diff"` (a dedicated diff document) — not for an ordinary `svg` doc.
-- **The doc-view panel is not a version viewer.** The `fleet-docview` panel shows a *region of the current doc*; it has nothing to do with version history.
-
-When the user mentions a "previous version," it's the timestamp→scrubber path. (Known issue to watch for: the shadow column can render page geometry but **no text** if the doc's shadow repo / historical build is incomplete — see the shadow-mirroring notes.)
-
-### Proof reader
-
-Press `r` to toggle proof reader mode. This highlights proof regions and shows a statement overlay panel (bottom-right) when scrolled to a cross-page proof.
-
-**Statement panel** (green): shared-store TLDraw showing the theorem statement. Click header to jump to the statement page. Annotations drawn in the panel appear in the main view.
-
-**Definition panel** (blue/indigo): appears above the statement panel when the proof references definitions, lemmas, or equations from other pages. Auto-selects the furthest-away dependency. Clickable badges in the statement header swap which dependency is shown; click the active badge to dismiss.
-
-Data flow:
-- `compute-proof-pairing.mjs` scans proof bodies for `\ref{}`/`\eqref{}`, builds a global label map, resolves to page regions, outputs `dependencies` array in `proof-info.json`
-- `svgDocumentLoader.ts` loads `ProofDependency[]` per pair
-- `ProofStatementOverlay.tsx` renders stacked panels with two shared-store TLDraw editors
-
-Dependencies are sorted by page distance descending (furthest first). Same-page deps (dist=0) are filtered out. Section, figure, and table labels are excluded.
-
 ## Voice Input
 
 Voice input is **explicit opt-in**. The default backend preference is off. The app does not auto-select a backend and does not silently fall back to another backend if the selected one is unavailable.
 
 Available backends are selected by the saved `voice-backend` preference:
 - `whisper` uses `whisper-stream` via `bin/whisper-bridge.mjs` on `ws://localhost:8179`.
-- `deepgram` / `deepgram-sdk` uses `bin/deepgram-sdk-bridge.mjs` through the server's same-origin `/voice/deepgram-sdk` proxy.
+- `deepgram` / `deepgram-sdk` uses `bin/deepgram-runtime/deepgram-sdk-bridge.mjs` through the server's same-origin `/voice/deepgram-sdk` proxy.
 - `chrome` uses Chrome/Web Speech only when explicitly selected and available.
 
 Whisper and Deepgram bridges are lazy-started when their explicit backend is selected. If a backend is unavailable, voice stays off or reports that backend as unavailable; it must not substitute Chrome/Web Speech implicitly.
