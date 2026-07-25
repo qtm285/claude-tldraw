@@ -22,7 +22,12 @@
   spent on the wrong machine's `client.log`, and a "finding" that turned out to be a logging
   default — while this was available the whole time and nobody used it. Skip: *"IT'S BEEN
   ENABLED. IT'S ALWAYS ENABLED."*
-- **To see what he sees: `screenshot(doc, target: "screen")`.** To see what his tab logs:
+- **You cannot screenshot Skip's screen. There is no tool that does it and there is not
+  going to be one.** `screenshot(doc, target: "screen")` accepts the argument and silently
+  returns a canvas render of the document — no toolbar, no HUD, no selection chrome. This
+  file used to recommend it as "to see what he sees," which is how agents ended up
+  reporting a render of a document back to him as if it were his screen. **To see his live
+  UI, attach over CDP** (above) and read the DOM. To see what his tab logs:
   `~/.config/tlda/client.log` — **on the server, not the Mini**, if he is on the Air. To see
   if it's slow for him: the client profiler on his session, or `src/livePerfProbe.ts`, which
   already samples every tab every ~10s and carries `href` for attribution. A browser you
@@ -458,7 +463,20 @@ Whisper log: `~/.config/tlda/whisper-bridge.log`. Deepgram SDK log: `~/.config/t
 **Browser code uses `src/logger.ts`.** Every `log.{debug,info,warn,error}('namespace', 'message', { data })` call:
 
 1. Goes to the browser console (only when the namespace's level beats the console threshold — default `warn`)
-2. **Always** gets POSTed to `/api/log` and appended to `~/.config/tlda/client.log`
+2. Gets POSTed to `/api/log` and appended to `~/.config/tlda/client.log` — **but only if
+   the namespace's level beats the same threshold.** `shouldLog` returns *above* `enqueue`
+   in `src/logger.ts`, and the default threshold is `warn`.
+
+> **So `log.debug` and `log.info` write NOTHING by default — no console, no POST, no file.**
+> This paragraph used to say the sink "always" captured, and that belief hid a failure for
+> months: every voice diagnostic in the app was `log.debug`/`log.info`/`console.log`, so
+> `grep -c '"ns":"voice"'` on a 370 MB live `client.log` returned **0**. Fourteen
+> `chat-scroll` call sites had the same problem, and their silence was misread as evidence
+> the code never ran.
+>
+> **Use `log.metric()` for anything that must land.** It bypasses the level gate and always
+> enqueues, so it works in Skip's ordinary tab with no URL parameter. If you are adding
+> instrumentation for a bug you cannot reproduce, `log.metric` is the only correct choice.
 
 So agents can `tail -f ~/.config/tlda/client.log` (or grep it) to see what the browser is doing without needing playwright or the user's DevTools.
 
