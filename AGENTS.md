@@ -170,6 +170,26 @@ The tie-breaker is the behavior Skip actually lives with. If he uses the feature
 
 Worked example, 2026-07-27. `src/highlighterSnap.ts` carried *"click card to insert chip"* over code that swallowed the click. An agent reported it as documented-behavior-that-never-happened; a chief agreed and shipped a fix making the click work, along with tap handlers on three other surfaces nobody had asked about. Skip: *"I didn't ask you to do anything. Highlights or the inbox."* The interaction was meant to be a drag; the comment had been wrong since it was written, and the swallow was correct. The change was reverted, and the real request — a drag opens the filtering overlay — went unstarted while that work happened.
 
+**A git author of `David A Hirshberg` is an agent. Skip has never written a commit in
+this repo.** Skip, 2026-07-26: *"I don't write shit in this app myself, dude."* /
+*"Until recently, every agent's work was tagged as me. I have never written a commit in
+this."*
+
+He has RSI and works by voice; he does not write code. Agents commit from his machine
+under his git identity, so **the author field carries no information about who wrote a
+line.** Only recently did agents begin committing under their own fleet names.
+
+This matters because the author field looks like exactly the evidence you want when you
+are deciding whether something was requested. It is not. Concretely, do **not** conclude
+from `git log`/`git blame` that Skip wrote, chose, approved, or is attached to anything.
+On 2026-07-26 an agent read `Author: David A Hirshberg` on two commits and told him to
+his face that he had written them — twice in one hour, an hour after writing the
+comment-is-not-a-spec rule below into this file. It is the same rule: **remember who
+writes the code**, applied to git instead of to comments.
+
+If you need to know whether something was asked for, the source is what Skip said —
+chat, in his words — not metadata.
+
 **Read the system before you edit it. Working behavior outranks the code in front of
 you.** Skip, 2026-07-26: *"if something is wrong with the fucking system, you do not
 edit code without reading the fucking system. That is a fucking rule."* And the test
