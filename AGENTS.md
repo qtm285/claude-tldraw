@@ -355,8 +355,16 @@ So:
   *"you absolutely can't render different documents side by side because you break
   the fucking history viewer."*
 - **The test is not "was this grouping inferred or authored."** It is **"are these
-  columns the same document, or different ones?"** Different documents in columns
-  is wrong by construction, whatever produced it and however deliberate it was.
+  columns different views of the same document, or different documents?"**
+  Different documents in columns is wrong by construction, whatever produced it and
+  however deliberate it was.
+- **"Document" here means the idea of a file, not the file.** Skip: *"where a
+  document is, you know, not necessarily a file, but, like, an idea of a file."*
+  His example of a view that may exist later: outlining a proof and then writing
+  prose from it — *"you could imagine displaying the outline next to the prose."*
+  Those are two files and **one** document, so they belong in columns. Do not
+  implement this test as path or file-identity equality; that would reject the
+  legitimate case and admit nothing useful.
 - **The horizontal layout space is claimed.** If you want to show several things at
   once and reach for columns, the answer is no — that space belongs to
   same-document comparison. Find another affordance or ask.
