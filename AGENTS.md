@@ -357,6 +357,13 @@ Consequence to know before you touch layout: with one `DocContext`, the Yjs sour
 editor edits **the loaded project's file**, not whatever it sits beside. Put two
 different documents side by side and it will silently keep editing the loaded one.
 
+**The shape that fixes it:** each place is a context, and **each place has a
+target** — Skip: *"each place has a target for history and the text editor and
+whatever other shit we build."* History shows that target's history; the text
+editor edits that target; anything built later resolves through the same one.
+Today all of them read the single project-wide `DocContext`, which is why they
+can only ever be about whatever loaded.
+
 Renaming is wanted but not done. **`?doc=` is load-bearing** — shared links,
 bookmarks, agent probes — so any rename needs the old URLs to keep working.
 
