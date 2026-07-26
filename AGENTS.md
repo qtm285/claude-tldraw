@@ -341,39 +341,21 @@ Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload gu
 
 ## Columns are reserved space
 
-**Side-by-side columns are for comparing one document with itself** — its history
-today, a merge view later. Skip, 2026-07-25: *"the point of fucking columns is to
-be, like, the same document comparison. So whether that's, like, history, or a
-fucking merging view or something. It's not just fucking groups."* And:
-**"that space is reserved and not to be used for any other bullshit."**
+**Placement is explicit. Nothing is put side by side implicitly.** Skip,
+2026-07-25: *"if something is side by side, that's explicit… like in the history
+viewer, we're like, give me a column next to the fucking column I'm looking at."*
+If you can't point at the action that asked for it, it shouldn't be there.
 
-So:
+**The slot is for comparing different views of one document** — history today, a
+merge view or an outline-beside-prose view later. *"That space is reserved and not
+to be used for any other bullshit."* Never put different documents in columns; that
+destroys what the layout means and breaks the history viewer.
 
-- **Never render different documents side by side.** Doing so destroys the meaning
-  of the column layout — if columns can be arbitrary documents, they can no longer
-  mean "versions of this one," and the history viewer is broken. Skip:
-  *"you absolutely can't render different documents side by side because you break
-  the fucking history viewer."*
-- **The test is not "was this grouping inferred or authored."** It is **"are these
-  columns different views of the same document, or different documents?"**
-  Different documents in columns is wrong by construction, whatever produced it and
-  however deliberate it was.
-- **"Document" here means the idea of a file, not the file.** Skip: *"where a
-  document is, you know, not necessarily a file, but, like, an idea of a file."*
-  His example of a view that may exist later: outlining a proof and then writing
-  prose from it — *"you could imagine displaying the outline next to the prose."*
-  Those are two files and **one** document, so they belong in columns. Do not
-  implement this test as path or file-identity equality; that would reject the
-  legitimate case and admit nothing useful.
-- **The horizontal layout space is claimed.** If you want to show several things at
-  once and reach for columns, the answer is no — that space belongs to
-  same-document comparison. Find another affordance or ask.
+A "document" is the idea of a file, not the file. An outline and the prose written
+from it are two files and one document. Don't implement this as path equality.
 
-This has already been violated once: `document-columns.mjs` assigned ordinary
-project parts a shared `group`, so the loader laid a whole project out as a
-horizontal sheet of adjacent documents. That is the failure mode — not malice, just
-an available-looking mechanism being reused for a different purpose, which is
-exactly what "reserved" forbids.
+Violated once already: `document-columns.mjs` gave ordinary project parts a shared
+`group`, laying a whole project out as a horizontal sheet. Nobody asked for it.
 
 ## TLDraw-Native UI Rule
 
