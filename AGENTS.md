@@ -377,6 +377,10 @@ Run `tlda --help` / `tlda <noun> --help` for the command list — don't duplicat
 
 **Never use `tlda build` to work around pipeline issues.** It bypasses change detection and masks bugs. If something isn't rebuilding when it should, fix the pipeline.
 
+**The CLI does not start a server.** Skip: *"most users of the CLI will not be their own server host."* A command that needs a server and can't reach one says so and stops. Currently violated by `ensureServer()` in `cli/tlda.mjs` — sixteen commands call it and it runs `server start` when the configured server is local. Delete it and its call sites; don't add another exemption like the one already at `cli/tlda.mjs:4605`.
+
+**Server connectivity must not gate local capability.** Skip: *"the things that interact with the server fully work, but they should partially work."* `mint` makes the tmux session and launches the harness locally, then registers the seat remotely — the local half shouldn't be refused because the remote half is unreachable. This is **not** a licence for local fallbacks: when the server can't reach a file on an agent's machine that is a real impossibility, and the answer is still 503.
+
 **IMPORTANT: Always use `tlda server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `tlda server stop` to stop, `tlda server status` to check.
 
 **If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda doc errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
@@ -794,7 +798,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Environment URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/daemon.yaml`'s `environments:` map. The active environment is named by `defaultEnv` (or `TLDA_ENV`). Every `environments:` entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active environment's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing environment or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
+**Environment URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/daemon.yaml`'s `environments:` block. The active environment is named by `environments.default` (or `TLDA_ENV`), and concrete entries live under `environments.values`. Every entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active environment's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing environment or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
 
 **config.json is retired.** Hosting/build settings live in `server.yaml`;
 environment selection plus machine, permissions, models, tmux, and task-document
@@ -805,7 +809,7 @@ fallbacks.
 
 **Split database/store config:** The active environment's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `daemon.yaml environments:` instead.
 
-**Testing against an alternate environment — use `--env`, never edit `defaultEnv`.** `~/.config/tlda/daemon.yaml` holds an `environments:` map of named environments (each a complete `{ database, store, licenseKey }` entry) and a `defaultEnv` naming the active one. `defaultEnv` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different environment (e.g. the Mac Mini), select an alternate environment by name for that run only:
+**Testing against an alternate environment — use `--env`, never edit `environments.default`.** `~/.config/tlda/daemon.yaml` holds named environments under `environments.values` (each a complete `{ database, store, licenseKey }` entry) and `environments.default` names the active one. `environments.default` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different environment (e.g. the Mac Mini), select an alternate environment by name for that run only:
 
 ```bash
 tlda doc open bregman --env wmtry     # flag, this run only (place it after the command)
@@ -813,7 +817,7 @@ TLDA_ENV=wmtry tlda agent create ...  # env form, same effect
 tlda daemon start --env wmtry         # the daemon + every agent it spawns target wmtry
 ```
 
-The environment **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `defaultEnv` to test an alternate environment**: that's the 6/27 failure shape — a stray shared default routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. **Nothing catches this for you.** The daemon has no automatic coherence guard here; it re-reads `daemon.yaml` for fence profiles and model aliases so edits apply on the next spawn, without a restart or a coherence check. `TLDA_SERVER` is no longer a second selector. Use `--env <name>` per run; the discipline is the whole protection.
+The environment **name** is the single selector — it flows daemon→spawn→agent-MCP so the whole chain resolves the same `database`+`store`. **Do not edit `environments.default` to test an alternate environment**: that's the 6/27 failure shape — a stray shared default routed every spawned agent's MCP to the Mini while the operator was on Fly, so agents registered to a roster nobody was watching. **Nothing catches this for you.** The daemon has no automatic coherence guard here; it re-reads `daemon.yaml` for fence profiles and model aliases so edits apply on the next spawn, without a restart or a coherence check. `TLDA_SERVER` is no longer a second selector. Use `--env <name>` per run; the discipline is the whole protection.
 
 ### Live deploy
 
