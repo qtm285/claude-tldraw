@@ -54,6 +54,37 @@
 
 **No backward compatibility.** Do not keep deprecated aliases, compatibility shims, old command paths, or migration layers unless Skip explicitly asks for them. When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt.
 
+**Tear it out. Don't add epicycles.** Skip's rule, in his words: *"the fix for almost
+every problem with this app is deleting code nobody asked for — much of which I'm
+completely unaware of."*
+
+The tell that you are building an epicycle: you are writing machinery whose only job
+is to make questionable code behave correctly. Validation, reconciliation, a
+freshness check, a cache, a retry, a "only do this when it's safe" conditional. Every
+one of those is a second thing that can break, protecting a first thing that nobody
+asked for. **When you notice you are doing that, stop and ask whether the thing you
+are protecting should exist at all.** Usually it shouldn't, and the diff is a
+deletion.
+
+Worked example, 2026-07-25. Creating the default layout saved the outgoing panels'
+chat filters, deleted the shapes, then reseeded the new panels from those saved
+filters — never asking whether the agent a filter pointed at still existed. Skip had
+a panel aimed at an agent that had been gone for twelve days: invisible to him, and
+recreated into every layout he made after. It also made his owned-chat count 2
+instead of 1, which permanently suppressed the unread-sender rail — a feature that
+had shipped and that he had **never once seen**. Two symptoms, one cause.
+
+The epicycle nearly shipped: an agent started designing a way to *validate* carried
+filters against a roster that is paginated 100 at a time, so the check would have to
+be right about liveness across pages. Skip cut it instead — **"default layout is a
+complete teardown and a complete recreation. That's what it fucking means."** The fix
+was deleting the save, the parameter, the type, and the reuse branch. Chat targets
+seed from the live roster every time; nothing carries over.
+
+The general shape, and why it keeps happening: this code was added by an agent, was
+never requested, and was invisible to Skip until it cost him a feature. Code nobody
+asked for does not announce itself — it shows up later as a bug he cannot name.
+
 **Keep working notes in scratch, not the repo.** Status briefs, drafts, plans, and other ephemeral working artifacts go in a scratch folder (the project `scratch/` or your session scratchpad) — not the repo root or committed docs. Untracked files don't dirty the index or block a deploy, but they clutter the tree; keep it tidy. Durable, verified documentation goes in the proper docs; everything working-and-temporary goes in scratch.
 
 Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs with TLDraw, supports KaTeX math in notes, real-time sync, and source-anchored annotations that survive document rebuilds.
