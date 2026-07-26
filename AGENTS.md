@@ -447,14 +447,27 @@ Examples:
 
 Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
 
-## The naming is wrong: a "doc" is a project, a document is a place
+## Project as world
 
-Skip, 2026-07-25: *"probably we're gonna have to stop calling docs docs when
-they're ultimately projects. And a document is like a place spatially."*
+**This is one spec, and it has always been read as two.** The navigation half and
+the coherence half were specified in separate conversations, so every agent who
+has picked this up has built one and never learned the other existed. That is the
+whole reason it is still unfinished. Navigation is how a person moves through the
+world; coherence is what makes it the same world for everyone in it. Teleporting
+to a place holding a stale copy is not navigation, and a correctly synced file you
+cannot reach is not a project.
 
-What the code calls a **doc** — `?doc=`, `docName`, `DocContext`,
-`/api/projects/:doc` — is the **project**. What should be called a **document** is
-a **place within it**, reached by jumping.
+### The world and its places
+
+A project is a world. Skip, 2026-07-03: *"it's a project is more of a world, which
+is the mean, that's just the reality. Right? Like, you work in a project. You live
+in it."* It holds documents, and the documents are places.
+
+**The naming is wrong.** Skip, 2026-07-25: *"probably we're gonna have to stop
+calling docs docs when they're ultimately projects. And a document is like a place
+spatially."* What the code calls a **doc** — `?doc=`, `docName`, `DocContext`,
+`/api/projects/:doc` — is the **project**. A **document** is a **place within it**,
+reached by jumping.
 
 This is why the model has no document identity: the word was already spent. There
 is exactly one `DocContext` per viewer, carrying the *project*, so nothing can say
@@ -469,27 +482,121 @@ different documents side by side and it will silently keep editing the loaded on
 target** — Skip: *"each place has a target for history and the text editor and
 whatever other shit we build."* History shows that target's history; the text
 editor edits that target; anything built later resolves through the same one.
-Today all of them read the single project-wide `DocContext`, which is why they
-can only ever be about whatever loaded.
 
 Renaming is wanted but not done. **Do it as a clean break when it happens** — Skip:
 *"no backward compat. Agent probes can change. Literally no one but me has links to
 anything."* No aliases, no dual-reading of old parameter names, no migration layer.
 Update the probes and move on.
 
-## You teleport between documents, you don't walk
+**Inside the project is identical on every machine. Outside is reached through
+`dotdot`.** What lies outside the project is not the project's business except
+insofar as it has to be, so it is never referenced by a real filesystem path. It is
+referenced through `dotdot` — the project's own name for outside — which each
+machine resolves locally.
 
-Skip, 2026-07-25: *"the normal way you go from document to document is fucking
-teleporting, not walking."*
+`dotdot` does not stack. There is no `dotdot/dotdot`. It is one name for "not in
+here," not a step in a directory tree; the moment it composes, the project is
+modelling someone else's filesystem again.
 
-Open a different document in the same project and it goes **somewhere else**.
-Where else is an implementation detail — another TLDraw page, or far off the
-current view. What matters is that you **jump** there; you never traverse the
-space between. *"Only normal way you would get there."*
+The name was chosen because it is unlikely to collide with a directory someone
+actually has — **not** because it is the clearest word. `outside` reads better and
+is exactly the kind of folder a person might already have made, and a reserved word
+that collides fails silently. Don't reopen this.
 
-This is why adjacent documents are wrong: things laid side by side invite panning
-between them, which is walking. Distance or a page boundary is what makes the jump
-the only route.
+### Moving through it
+
+**You teleport between documents, you don't walk.** Skip, 2026-07-25: *"the normal
+way you go from document to document is fucking teleporting, not walking."* Open a
+different document and it goes **somewhere else** — another TLDraw page, or far off
+the current view. Where else is an implementation detail. What matters is that you
+**jump**; you never traverse the space between. *"Only normal way you would get
+there."* Adjacency is wrong because things laid side by side invite panning, which
+is walking.
+
+**Navigation is hypertext, through one operation.** Following a reference takes you
+to that place. Every way of going somewhere — a link inside a document, a chip in
+chat, a search result, a card, prev/next — means the same thing and goes through the
+same navigator.
+
+**Forward and back are in-app, never the browser's.** Skip, 2026-07-25: *"we don't
+wanna be using browser forward and back… you don't know what's gonna fucking happen
+when you click those, whereas if you click a forward and back button in the app you
+know it's within page."* The stack is over the project's places. The go/return
+arrows are its UI, and where the return arrow sits there is both a back and a
+forward, each shown when that direction has somewhere to go. Nothing else rides the
+browser's history, and the browser's back button does not drive the app.
+
+**The workspace comes with you.** The fleet HUD travels to the destination and is
+laid out for that document's width — not left behind, not duplicated per document,
+not rigidly translated by a guessed distance.
+
+**Columns are reserved space.** Placement is explicit; nothing is put side by side
+implicitly. Skip, 2026-07-25: *"if something is side by side, that's explicit… like
+in the history viewer, we're like, give me a column next to the fucking column I'm
+looking at."* If you can't point at the action that asked for it, it shouldn't be
+there. The slot is for comparing different views of **one** document — history
+today, a merge or outline-beside-prose view later. *"That space is reserved and not
+to be used for any other bullshit."*
+
+A "document" is the idea of a file, not the file. An outline and the prose written
+from it are two files and one document. Don't implement this as path equality.
+
+Violated once already: `document-columns.mjs` gave ordinary project parts a shared
+`group`, laying a whole project out as a horizontal sheet. Nobody asked for it.
+
+### Coherence — the same world for everyone, including the server
+
+**The app's editor is just another machine.** Skip, 2026-07-12: *"the YJS editor is
+just like another person editing the document on their machine with a fucking
+watcher"* — *"it's just another machine. Editing like any other machine."* No
+special priority.
+
+**Writes are checkpoints, not a stream.** This is not live sync and is not a
+Dropbox product. Skip, 2026-07-05: *"our original sync model was not just everyone
+has a synced file system. It was what you see is what gets synced. Meaning, it's
+post build sync."* And: *"I don't wanna be giving people a Dropbox type product…
+if you want synced text editing, you should be using synced text editing in a
+synced text editor. It's mixing and matching that's complicated."*
+
+A write commits at a boundary, not on a debounce timer — Skip, 2026-07-12: *"click
+out or [vim] mode transition"*, plus *"an idle write as well… there can be a
+preference for an idle interval."*
+
+**An edit on any connected machine reaches every other one.** Skip, 2026-07-12:
+*"if it's edited on your machine, if it's edited on any connected machine, it goes
+to you."* Not the last machine that pushed — every machine holding the project.
+
+**Conflicts hold, and the person is told.** Skip, 2026-07-12: *"everybody has their
+merge tools. Right? And we have our mirroring system. So if you wind up with a
+fucking conflict, you gotta merge before your shit gets picked up and sent in
+again."* Nothing is silently overwritten — and nothing is silently *stopped*. A
+machine holding a conflict says so where the person can see it, not in a log.
+
+**Everything the project talks about is versioned.** Skip, 2026-07-16: *"the whole
+fucking idea of this project as world thing was to have fucking versioned
+everything we talk about in the project. So if an agent overwrites a file that we
+had been talking about later, the fucking previous version is identifiable from
+chat."*
+
+**Sharing lands before it is visible.** When someone shares a document it is
+materialized on the recipient's filesystem *and* visible in the app before it
+reaches their inbox — by the time they see it, they can open it. Routine success is
+silent (see *Chat is human chat*). A reference that cannot be resolved renders as
+visibly unavailable with the reason — never a normal-looking link, never a document
+whose body says "failed to load" — and the sender is told to amend.
+
+### What this rules out
+
+- A real filesystem path, or a real `..`, in anything shared between machines.
+  Outside is `dotdot`, and `dotdot/dotdot` does not exist.
+- Different documents rendered side by side.
+- Anything riding `pushState`/`popstate`, or the browser's back button changing app
+  state.
+- A second, private navigation stack beside the app's.
+- Streaming the editor's keystrokes into the source authority.
+- A machine that stops syncing without saying so.
+- A file reference that is visible before the bytes are local.
+- Routine success narrated at anyone.
 
 ## Chat is human chat
 
@@ -513,24 +620,6 @@ that cries wolf trains everyone to ignore it. The spawn mailbox reported failure
 seven times in one evening for agents that were alive and working, and the chief
 stopped reading it. **Fix the honesty before silencing the noise** — silencing
 first just hides the lies.
-
-## Columns are reserved space
-
-**Placement is explicit. Nothing is put side by side implicitly.** Skip,
-2026-07-25: *"if something is side by side, that's explicit… like in the history
-viewer, we're like, give me a column next to the fucking column I'm looking at."*
-If you can't point at the action that asked for it, it shouldn't be there.
-
-**The slot is for comparing different views of one document** — history today, a
-merge view or an outline-beside-prose view later. *"That space is reserved and not
-to be used for any other bullshit."* Never put different documents in columns; that
-destroys what the layout means and breaks the history viewer.
-
-A "document" is the idea of a file, not the file. An outline and the prose written
-from it are two files and one document. Don't implement this as path equality.
-
-Violated once already: `document-columns.mjs` gave ordinary project parts a shared
-`group`, laying a whole project out as a horizontal sheet. Nobody asked for it.
 
 ## TLDraw-Native UI Rule
 
@@ -654,7 +743,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Server URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/daemon.yaml`'s `servers:` map. The active server is named by `defaultServer` (or `TLDA_CONFIG`). Every `servers:` entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active server's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing server or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
+**Server URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/server.yaml`'s `servers:` map. The active server is named by `defaultServer` (or `TLDA_CONFIG`). Every `servers:` entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active server's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing server or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
 
 **config.json is retired.** Server selection and build settings live in
 `server.yaml`; machine, permissions, models, tmux, and task-document settings
@@ -662,9 +751,9 @@ live in `daemon.yaml`; bots live in `bots.yaml`; ordinary CLI preferences live
 in `cli.yaml`; tokens live in `~/.config/tlda/tokens.json` (or token env vars).
 Secrets never live in YAML. There are no generic config fallbacks.
 
-**Split database/store config:** The active server's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `daemon.yaml servers:` instead.
+**Split database/store config:** The active server's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `server.yaml servers:` instead.
 
-**Testing against an alternate server — use `--config`, never edit `defaultServer`.** `~/.config/tlda/daemon.yaml` holds a `servers:` map of named servers (each a complete `{ database, store, licenseKey }` entry) and a `defaultServer` naming the active one. `defaultServer` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate server by name for that run only:
+**Testing against an alternate server — use `--config`, never edit `defaultServer`.** `~/.config/tlda/server.yaml` holds a `servers:` map of named servers (each a complete `{ database, store, licenseKey }` entry) and a `defaultServer` naming the active one. `defaultServer` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate server by name for that run only:
 
 ```bash
 tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
