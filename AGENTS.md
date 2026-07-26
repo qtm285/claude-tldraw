@@ -185,10 +185,24 @@ stored identity, and a chief relayed that to him as the answer. He does not pass
 accepted because it fit the shape, and the shape was built out of an assumption about
 what he does.
 
-This has teeth on the diagnosis too: **when he says it's a race condition, it is a race
-condition.** His statement of the problem is the starting axiom (see the section on
-that below); go find the mechanism that makes it true rather than a mechanism that
-makes him mistaken.
+**Separate his report of the behavior from his guess at the mechanism. The first is
+authoritative; the second is a lead he does not claim to be sure of.** Skip,
+2026-07-26, correcting an agent who had just written the over-literal version into this
+file:
+
+> *"When I say it's a race condition, that doesn't necessarily mean it's a race
+> condition. I didn't even say that. I said… it's a race condition **or something**. It's
+> the app not responding to its inputs in the obvious fucking way it should. That's a
+> different statement. **Don't trust me to know what's going on in the app. Do you trust
+> me to know when something has, like, unpredictable and confusing behavior?**"*
+
+So: *"it's a race condition or something"* asserts **the app is not responding to its
+inputs in the obvious way** — and that part you take as given. It does not assert
+concurrency, and chasing a literal race because he used the phrase is how you spend an
+hour in the wrong file.
+
+What is never on the table is the third option: that he is using it wrong. The choice
+is between mechanisms, not between "the app is broken" and "he is."
 
 **Identity: an intentional statement of who you are is stored. A generated name is
 not.** Skip, 2026-07-26: *"Passing name is supposed to be overriding the stored
