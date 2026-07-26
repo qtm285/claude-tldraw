@@ -203,7 +203,7 @@ Collaborative annotation system for reviewing LaTeX papers. Renders PDFs as SVGs
 
 **The local `~/.config/tlda/fleet.db` on the Mini is NOT the real database. That file is junk.** It is stale/local and does not reflect the real fleet. Do **not** query it, count it, or treat it as authoritative for anything — an audit, a roster, "how many agents do we have," whether an agent is spawnable, ANY of it. If you find yourself running `sqlite3 ~/.config/tlda/fleet.db`, stop: you are looking at the wrong thing.
 
-**To reach real agent/fleet state, go through the real server** — the fleet MCP tools (`fleet_table`, `register`, `spawn`, `search_logs`, …) and the Fly-backed API, which resolve through the active config's `database` axis. The MCP/CLI already point there via `TLDA_SERVER`; use them instead of reading a local file.
+**To reach real agent/fleet state, go through the real server** — the fleet MCP tools (`roster`, `register`, `spawn`, `search`, …) and the Fly-backed API, which resolve through the active config's `database` axis. The MCP/CLI already point there via `TLDA_SERVER`; use them instead of reading a local file.
 
 ## GROUND TRUTH: SESSIONS AND JSONL ARE NEVER LOST
 
