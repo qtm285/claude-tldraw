@@ -876,6 +876,35 @@ The environment **name** is the single selector — it flows daemon→spawn→ag
 
 ### Live deploy
 
+**Two rules, from Skip on 2026-07-26. They are not process preferences — they
+exist because breaking them makes the live code cycle and makes "deployed" a
+lie.**
+
+**1. The chief deploys. Nobody else.** Skip: *"you're chief. you and only you
+deploy."* If you are an implementer, you do not run `npm run deploy:live`, `fly
+deploy`, or `scripts/live-deploy.mjs` — not to check your own work, not because
+it is small, not because the chief is busy. You hand the change to the chief and
+the chief deploys it.
+
+**2. Every deploy is from `main`, so the code does not cycle.** Skip: *"everyone
+deploys from main so the code doesn't cycle."* Never deploy a branch or a
+worktree. Two people deploying different bases means the live server flips
+between them and whoever finished last decides what is running.
+
+What this prevented, 2026-07-26: between 17:05 and 17:45 five agents committed
+straight to shared `main` and at least two deployed concurrently from it. A fix
+for a fleet-wide `inbox()` crash was committed at 17:42, deployed, and reported
+successful — and testing was serving `5b050c3d`, which predates it. The broken
+call was still in the running container. Every agent's mail stayed broken while
+the deploy said it had worked.
+
+**Verify inside the running container, not from the deploy's exit code.** A
+`fly deploy` can print *"Updated machine config"*, *"reached a good state"*, and
+exit 0 while the machine keeps its old image. `/api/build-info` can also report
+a `gitSha` that is not what you just built. The check that does not lie is
+`fly ssh console -a <app> -C "grep -c <a-string-your-change-adds-or-removes>
+/app/<file>"`.
+
 The current `phi`/Fly live deploy path is documented in `docs/live-deploy.md`.
 Use `fly deploy -c fly.live.toml` after rebuilding the SPA.
 
