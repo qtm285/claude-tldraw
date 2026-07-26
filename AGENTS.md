@@ -339,6 +339,20 @@ Examples:
 
 Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
 
+## You teleport between documents, you don't walk
+
+Skip, 2026-07-25: *"the normal way you go from document to document is fucking
+teleporting, not walking."*
+
+Open a different document in the same project and it goes **somewhere else**.
+Where else is an implementation detail — another TLDraw page, or far off the
+current view. What matters is that you **jump** there; you never traverse the
+space between. *"Only normal way you would get there."*
+
+This is why adjacent documents are wrong: things laid side by side invite panning
+between them, which is walking. Distance or a page boundary is what makes the jump
+the only route.
+
 ## Columns are reserved space
 
 **Placement is explicit. Nothing is put side by side implicitly.** Skip,
