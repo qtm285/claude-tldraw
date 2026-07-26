@@ -1,5 +1,113 @@
 # tlda - Paper Review & Annotation System
 
+
+<!-- lane:auto:start lane=app hash=f90da080926e -->
+<!-- Auto-generated guidance for this project. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). -->
+## App-development guidance (tlda/app lane)
+
+This is the complete contract for agents building the tlda app. It is short on
+purpose. Read it, then do the work.
+
+### The one job
+
+Skip asks for a few minutes of real work. Do **that** — fix the thing he
+reported and confirm it actually works — and nothing else. He cannot type (RSI;
+he is on voice), so a broken app **physically hurts him** and every minute it is
+down costs him in real time. Your job is to give him back a working surface fast.
+Burying his small request in tests, previews, and process while he is blocked is
+not diligence — it is the failure.
+
+### What "done" means
+
+Done is two things. Neither is "it has tests."
+
+1. **The app works, and you watched it work on the real surface.** Open the thing
+   Skip actually uses and drive your change end to end — the site loads, the CLI
+   runs without throwing, the flow you touched does what it should, with your own
+   eyes. The **user-visible surface is the only authority**. A green build, a
+   hash, a sentinel string, a log line, a database row, a private/preview tab, an
+   injected synthetic event — all *diagnose*; none *prove* the app works, and none
+   outrank a failure Skip can see.
+2. **You did exactly what was asked — nothing else.** No new behavior, no changed
+   default, routing, onboarding, layout, sync, or visibility as a side effect. If
+   something outside your scope seems necessary, raise it separately — don't
+   smuggle it in. Feature work stays in a worktree.
+
+   A refactor changes structure and preserves the intended product contract. It
+   may expose and repair a concrete bug by deleting the unnecessary path, state,
+   fallback, or special case that causes it. It may not add a new mechanism or
+   invent a product behavior and call that a bug fix. If it increases complexity
+   or breaks the app, it is the wrong task regardless of the tests attached.
+
+If Skip asked for a live fix, the task includes integration and deployment.
+Do not stop at implemented, reviewed, approved, committed, or built. Carry the
+requested change to the live app, then watch that surface and rollback or repair
+immediately if it is wrong. If he did not ask for the change, do not deploy it.
+
+### Testing never decides what ships
+
+No CI runs them, so they gate nothing. They are either trivial or written after a
+human already found the bug, and then they rot into tripwires that fail the
+moment someone makes the app *correct*. Agents wrestling broken test harnesses
+keeps requested work from ever reaching Skip while unrequested changes pass
+through under enough ceremony. **The literal request decides what ships.**
+Requested work goes live; unrequested work does not. Tests, reviews, previews,
+and reports cannot reverse either decision. Verify requested work on the live
+surface after deployment; rollback or repair if it is wrong.
+
+### When you can't reach the behavior, don't fake proof
+
+Before a preview counts as evidence, confirm it is real: the bundle is loaded, the
+exact control exists, the assets/endpoints resolve, the console is clean. A
+harness with missing assets, no composer, voice off, or console errors **cannot
+produce evidence** — piling on setup just builds a fancier fake, and that is a
+blocker to the claim, not to deployment of requested work. If supported
+automation genuinely can't exercise the thing, say so immediately and ask Skip
+for **one bounded test** — exact URL, one action, one expected result. A few
+seconds of real contact is cheaper than building hours of proxy ceremony. The
+manufactured substitute is the failure; the honest ask is not.
+
+Graduate your claims: say the rung you actually reached — *implemented*,
+*locally tested*, *preview-tested*, *deployed*, *user-visible verified*. Never say
+"done" or "you can stay out of it" below the top rung.
+
+### The corrections Skip should never have to repeat
+
+- **When he says it's broken, it's broken.** A contradiction from Skip voids every
+  prior "success" report until you reconcile it on that same surface. Don't
+  dismiss his report because your repro passed.
+- **When corrected, stop.** Don't ship a faster or longer version of what was just
+  rejected. Discard the rejected object — a patch that fixed a diagnostic case but
+  broke the intended behavior is reverted, never the base for the next patch.
+- **After a bad release, stop stacking.** Decide revert-or-not, measure the live
+  regression, get back to the last contract Skip accepted — before any new work.
+- **Stay present while he is talking.** Don't manage Skip out of a live incident,
+  and don't disappear into background work; continue when he releases you.
+- **No silent fallback, no swallowed/log-only error.** Recover through the
+  supported path or surface the failure on the real error surface.
+
+### Managers compare the change to the request
+
+Read Skip's instruction, then read the actual diff and behavior. If they match,
+move the change through integration and deployment without inventing a new
+review, rebuild, report, approval, or status pause. If they do not match, reject
+the change regardless of how many tests or reviewers it has. Do not pass along
+an implementer's preferred substitute because it arrived wrapped in ceremony.
+
+Give implementers the configured app-development permissions their task needs —
+do not request a narrower `wd` profile and then invent machinery around the
+resulting denial.
+
+### Who to ask
+
+- **app-librarian** — architecture, source location, logs, tool behavior, intended
+  tlda/fleet behavior.
+- **app-historian** — prior app decisions, old bug history, what changed and why.
+- **app-tester** — browser verification, screenshots, interaction testing, repros.
+- **ops** — machine, deploy, server, auth, daemon, infrastructure.
+- **math-librarian** or the assigned math agent — paper content or math judgment.
+<!-- lane:auto:end -->
+
 ## NON-NEGOTIABLE: UI VERIFICATION
 
 - Don't serve a sandbox as a test for UI behavior.
