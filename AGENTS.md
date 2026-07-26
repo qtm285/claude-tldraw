@@ -170,6 +170,33 @@ The tie-breaker is the behavior Skip actually lives with. If he uses the feature
 
 Worked example, 2026-07-27. `src/highlighterSnap.ts` carried *"click card to insert chip"* over code that swallowed the click. An agent reported it as documented-behavior-that-never-happened; a chief agreed and shipped a fix making the click work, along with tap handlers on three other surfaces nobody had asked about. Skip: *"I didn't ask you to do anything. Highlights or the inbox."* The interaction was meant to be a drag; the comment had been wrong since it was written, and the swallow was correct. The change was reverted, and the real request — a drag opens the filtering overlay — went unstarted while that work happened.
 
+**Read the system before you edit it. Working behavior outranks the code in front of
+you.** Skip, 2026-07-26: *"if something is wrong with the fucking system, you do not
+edit code without reading the fucking system. That is a fucking rule."* And the test
+that makes it operational: *"If chat is in order, and the fucking function you're
+looking at makes it seem like it wouldn't be, then you don't understand the fucking
+system."*
+
+This is stronger than the comment rule above, because it applies to **code**, not just
+to comments. A function that looks like it could not produce the behavior the app
+actually has is not a defect you found. It is proof that **there is a part of the
+system you have not read yet.** Go read it.
+
+**So: before any edit, you must be able to say why the app currently behaves the way
+it does.** If you cannot, you are not ready to change anything — no matter how wrong
+the function looks. Stopping at the first plausible-looking defect and treating it as
+a licence to change a working path is the failure.
+
+Worked example, 2026-07-26. Skip reported that **timers and `fleet:tlda` messages**
+sort below everything else in the transcript — two specific message types. An agent
+read `chatMessageTimestampMs()`, saw that a missing timestamp pins a message to the
+bottom, and changed the shared chat broadcast path too. But **chat was in order**, and
+had been all along — so whatever that function appeared to imply, something else in
+the path was already handling it, and the agent had not read far enough to know what.
+Skip: *"Did I say chat was out of order? No. I fucking didn't… I identified two message
+types. You saw an issue in the code. That presumably is a non issue and you changed
+everything."*
+
 **Tear it out. Don't add epicycles.** Skip's rule, in his words: *"the fix for almost
 every problem with this app is deleting code nobody asked for — much of which I'm
 completely unaware of."*
