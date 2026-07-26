@@ -339,6 +339,27 @@ Examples:
 
 Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
 
+## The naming is wrong: a "doc" is a project, a document is a place
+
+Skip, 2026-07-25: *"probably we're gonna have to stop calling docs docs when
+they're ultimately projects. And a document is like a place spatially."*
+
+What the code calls a **doc** — `?doc=`, `docName`, `DocContext`,
+`/api/projects/:doc` — is the **project**. What should be called a **document** is
+a **place within it**, reached by jumping.
+
+This is why the model has no document identity: the word was already spent. There
+is exactly one `DocContext` per viewer, carrying the *project*, so nothing can say
+"this thing belongs to document X." That's not an oversight, it's the vocabulary
+leaking into the design.
+
+Consequence to know before you touch layout: with one `DocContext`, the Yjs source
+editor edits **the loaded project's file**, not whatever it sits beside. Put two
+different documents side by side and it will silently keep editing the loaded one.
+
+Renaming is wanted but not done. **`?doc=` is load-bearing** — shared links,
+bookmarks, agent probes — so any rename needs the old URLs to keep working.
+
 ## You teleport between documents, you don't walk
 
 Skip, 2026-07-25: *"the normal way you go from document to document is fucking
