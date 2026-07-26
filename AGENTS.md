@@ -449,6 +449,14 @@ Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload gu
 
 ## Project as world
 
+**This section is the contract, not a description of the app.** Several clauses
+below are not true of the code today — as of 2026-07-26, source pushes mirror back
+to one machine rather than every connected one, and a rejected push is never
+delivered to anyone as a conflict to resolve. Read every clause as what the app
+owes, and grep before believing any of it describes current behavior. (Written
+flat, a spec reads as a survey of a working system; that is how this file came to
+promise two config guards that had been deleted.)
+
 **This is one spec, and it has always been read as two.** The navigation half and
 the coherence half were specified in separate conversations, so every agent who
 has picked this up has built one and never learned the other existed. That is the
