@@ -606,8 +606,21 @@ Read the frames as images to see the full interaction sequence. For a specific m
 
 **Test exactly what the user said is broken.** If the user says "button X doesn't navigate to a new page," the test is: click button X, assert page changed. Not a broader test suite that touches the same code path. Don't test something adjacent and declare the reported issue fixed.
 
-**Don't write unit tests here. A red test after a fix means the test was wrong.**
-Skip, 2026-07-25: *"the fundamental reality of the tests in this app is the tests
+**Don't write unit tests here, and on a small UI behavior don't test at all — just
+fix it.** Skip, 2026-07-25: *"stop testing… this is a little UI feature. It had an
+annoying behavior. You don't have to test it. It doesn't have an annoying behavior.
+If it's still fucking broken, I'll complain."*
+
+He is the verification loop for this class of change. A cosmetic or interaction
+annoyance gets fixed and shipped; he will tell you if it is still wrong. Writing a
+test for it is the waste, not the diligence.
+
+This is calibration, not a blanket ban on ever checking anything — he said *"not
+like, stop testing"* in the same breath. Judgment: a UI annoyance needs no test; a
+socket that wedges the whole fleet earns a real repro you can run. What is ruled out
+is the reflex of attaching unit tests to every change.
+
+Why, in his words: *"the fundamental reality of the tests in this app is the tests
 are written to pass. And they don't test anything of any value. Right? Like, if we
 have broken features that are testing passing tests, and then when we fix them,
 they stop passing. Like, it's a sign."* And: *"The approach the, like, unit testing
