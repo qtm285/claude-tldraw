@@ -377,6 +377,10 @@ Run `tlda --help` / `tlda <noun> --help` for the command list — don't duplicat
 
 **Never use `tlda build` to work around pipeline issues.** It bypasses change detection and masks bugs. If something isn't rebuilding when it should, fix the pipeline.
 
+**The CLI does not start a server.** Skip: *"most users of the CLI will not be their own server host."* A command that needs a server and can't reach one says so and stops. Currently violated by `ensureServer()` in `cli/tlda.mjs` — sixteen commands call it and it runs `server start` when the configured server is local. Delete it and its call sites; don't add another exemption like the one already at `cli/tlda.mjs:4605`.
+
+**Server connectivity must not gate local capability.** Skip: *"the things that interact with the server fully work, but they should partially work."* `mint` makes the tmux session and launches the harness locally, then registers the seat remotely — the local half shouldn't be refused because the remote half is unreachable. This is **not** a licence for local fallbacks: when the server can't reach a file on an agent's machine that is a real impossibility, and the answer is still 503.
+
 **IMPORTANT: Always use `tlda server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `tlda server stop` to stop, `tlda server status` to check.
 
 **If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda doc errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
