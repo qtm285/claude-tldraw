@@ -170,6 +170,47 @@ The tie-breaker is the behavior Skip actually lives with. If he uses the feature
 
 Worked example, 2026-07-27. `src/highlighterSnap.ts` carried *"click card to insert chip"* over code that swallowed the click. An agent reported it as documented-behavior-that-never-happened; a chief agreed and shipped a fix making the click work, along with tap handlers on three other surfaces nobody had asked about. Skip: *"I didn't ask you to do anything. Highlights or the inbox."* The interaction was meant to be a drag; the comment had been wrong since it was written, and the swallow was correct. The change was reverted, and the real request — a drag opens the filtering overlay — went unstarted while that work happened.
 
+**Never conclude Skip is doing something wrong.** Skip, 2026-07-26: *"fuck you for
+blaming the user."* / *"anytime you think I'm doing something wrong, I am not doing
+something wrong."*
+
+If your explanation of a bug requires him to have done something unusual — passed a
+flag he doesn't pass, clicked something he didn't click, held it wrong — your
+explanation is finished being useful and you have not found the defect yet. The app is
+wrong; keep looking.
+
+The same day, an agent explained the Sesame-identity bug as a `?name=` URL overwriting
+stored identity, and a chief relayed that to him as the answer. He does not pass
+`?name=`. The mechanism was real and reachable, and it was not his bug — the story was
+accepted because it fit the shape, and the shape was built out of an assumption about
+what he does.
+
+This has teeth on the diagnosis too: **when he says it's a race condition, it is a race
+condition.** His statement of the problem is the starting axiom (see the section on
+that below); go find the mechanism that makes it true rather than a mechanism that
+makes him mistaken.
+
+**Identity: an intentional statement of who you are is stored. A generated name is
+not.** Skip, 2026-07-26: *"Passing name is supposed to be overriding the stored
+identity."* / *"The fucking rule is any intentional statement that this is my
+identity makes that your fucking identity. Stores it."*
+
+So the line is **intentional vs. generated**, not URL vs. stored:
+
+- `?name=` in the query parameter is one. Going into the settings UI and signing in is
+  another. Skip: *"If you pass name in the fucking query parameter, that's doing that.
+  If you fucking go into the fucking settings UI…"* Any deliberate "I am X" **wins over
+  whatever was stored, and is written to durable storage.** It is the most recent thing
+  the person actually said about who they are.
+- The generated Sesame-Street-style name is the *absence* of such a statement. It is
+  correct behaviour for a session with no stored id, and it must **never** be
+  persisted over one.
+
+Do not "fix" identity by making a deliberate name non-persistent — that is this rule
+backwards, and it shipped once on 2026-07-26 (`73b7d2b3`, reverted). If a session with
+a stored id ends up as a generated name, the defect is that a *generated* name got
+persisted or preferred, never that a *deliberate* one did.
+
 **A git author of `David A Hirshberg` is an agent. Skip has never written a commit in
 this repo.** Skip, 2026-07-26: *"I don't write shit in this app myself, dude."* /
 *"Until recently, every agent's work was tagged as me. I have never written a commit in
