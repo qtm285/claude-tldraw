@@ -162,6 +162,14 @@ resulting denial.
 
 **No backward compatibility.** Do not keep deprecated aliases, compatibility shims, old command paths, or migration layers unless Skip explicitly asks for them. When changing an API, schema, tool interface, or shape prop format — just make the breaking change. Callers adapt.
 
+**Remember who writes the code. A comment is not a spec.** Skip, 2026-07-27: *"remember who writes the code. You saw a comment written by an agent. That described the behavior of a feature as implemented, right, as I experienced it and was not complaining about it. Being wrong. That means the comment is wrong."*
+
+Almost every comment in this repo was written by an agent, describing what it believed it was building. It carries no more authority than any other agent claim. So when a comment and the code disagree, **that is not evidence the code is broken** — and "the code doesn't do what the comment says" is not a bug report.
+
+The tie-breaker is the behavior Skip actually lives with. If he uses the feature and has not complained, the shipped behavior is the requirement and **the comment is the thing that's wrong — fix the comment.** Only Skip saying it's wrong makes the behavior wrong.
+
+Worked example, 2026-07-27. `src/highlighterSnap.ts` carried *"click card to insert chip"* over code that swallowed the click. An agent reported it as documented-behavior-that-never-happened; a chief agreed and shipped a fix making the click work, along with tap handlers on three other surfaces nobody had asked about. Skip: *"I didn't ask you to do anything. Highlights or the inbox."* The interaction was meant to be a drag; the comment had been wrong since it was written, and the swallow was correct. The change was reverted, and the real request — a drag opens the filtering overlay — went unstarted while that work happened.
+
 **Tear it out. Don't add epicycles.** Skip's rule, in his words: *"the fix for almost
 every problem with this app is deleting code nobody asked for — much of which I'm
 completely unaware of."*
