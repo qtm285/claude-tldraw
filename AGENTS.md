@@ -615,10 +615,28 @@ He is the verification loop for this class of change. A cosmetic or interaction
 annoyance gets fixed and shipped; he will tell you if it is still wrong. Writing a
 test for it is the waste, not the diligence.
 
-This is calibration, not a blanket ban on ever checking anything — he said *"not
-like, stop testing"* in the same breath. Judgment: a UI annoyance needs no test; a
-socket that wedges the whole fleet earns a real repro you can run. What is ruled out
-is the reflex of attaching unit tests to every change.
+This is calibration, not a blanket ban — he said *"not like, stop testing"* in the
+same breath. Here is the line, in his words:
+
+> *"The things that need tests are things that can fail silently and
+> catastrophically, whether that catastrophe is, like, you know, the app being down
+> as a communication mechanism, or basically history being lost, or document state
+> drifting from visible state."*
+
+**Silent AND catastrophic. Both, or it doesn't qualify.** A loud failure doesn't need
+a test — you'll see it. A visible annoyance doesn't need one — Skip will complain.
+What earns a test is damage that accumulates without anyone noticing:
+
+- **The app stops working as a communication mechanism.** Agents go deaf, chat stops
+  delivering, a wake is dropped. Nobody gets an error; work just quietly stops.
+- **History is lost.** Events, messages, or session records that cannot be recovered
+  once gone.
+- **Document state drifts from visible state.** What is stored and what is rendered
+  disagree, so the screen lies about the document.
+
+That is why the CONNECTING-socket wedge earned a real runnable repro and a chat image
+that flickers did not. Apply the criterion; do not attach tests by reflex, and do not
+skip them on something that can rot silently.
 
 Why, in his words: *"the fundamental reality of the tests in this app is the tests
 are written to pass. And they don't test anything of any value. Right? Like, if we
