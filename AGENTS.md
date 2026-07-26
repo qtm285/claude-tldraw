@@ -364,8 +364,10 @@ editor edits that target; anything built later resolves through the same one.
 Today all of them read the single project-wide `DocContext`, which is why they
 can only ever be about whatever loaded.
 
-Renaming is wanted but not done. **`?doc=` is load-bearing** — shared links,
-bookmarks, agent probes — so any rename needs the old URLs to keep working.
+Renaming is wanted but not done. **Do it as a clean break when it happens** — Skip:
+*"no backward compat. Agent probes can change. Literally no one but me has links to
+anything."* No aliases, no dual-reading of old parameter names, no migration layer.
+Update the probes and move on.
 
 ## You teleport between documents, you don't walk
 
