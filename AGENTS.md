@@ -656,6 +656,11 @@ So:
 - **Evidence is observed behavior, not a green suite.** Drive the thing and watch it.
   A passing suite is not a claim you may relay to Skip as "it works" — see the
   browser-visible-behavior rule above.
+- **Never report a test count or the word "green" to Skip.** He asked for this
+  directly: *"I get slightly angry every time I hear the word green or see a
+  count."* "16/16", "8/8 passing", "all green" are not evidence and reading them
+  costs him patience. Say what you observed the app do. If you have nothing but a
+  suite result, you have not verified anything yet.
 
 Worked example, 2026-07-25. `tests/chat-image-retry.test.mjs` was **8/8 green while
 the feature visibly flapped** — a broken chat image cycled broken → blank → broken
