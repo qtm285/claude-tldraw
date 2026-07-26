@@ -339,6 +339,34 @@ Examples:
 
 Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload guard: when the Yjs sentinel's `buildReadyAt` advances past the last known reload timestamp by more than 5 seconds, the viewer synthesizes a local reload signal. This makes the system resilient to disconnects during a build.
 
+## Columns are reserved space
+
+**Side-by-side columns are for comparing one document with itself** — its history
+today, a merge view later. Skip, 2026-07-25: *"the point of fucking columns is to
+be, like, the same document comparison. So whether that's, like, history, or a
+fucking merging view or something. It's not just fucking groups."* And:
+**"that space is reserved and not to be used for any other bullshit."**
+
+So:
+
+- **Never render different documents side by side.** Doing so destroys the meaning
+  of the column layout — if columns can be arbitrary documents, they can no longer
+  mean "versions of this one," and the history viewer is broken. Skip:
+  *"you absolutely can't render different documents side by side because you break
+  the fucking history viewer."*
+- **The test is not "was this grouping inferred or authored."** It is **"are these
+  columns the same document, or different ones?"** Different documents in columns
+  is wrong by construction, whatever produced it and however deliberate it was.
+- **The horizontal layout space is claimed.** If you want to show several things at
+  once and reach for columns, the answer is no — that space belongs to
+  same-document comparison. Find another affordance or ask.
+
+This has already been violated once: `document-columns.mjs` assigned ordinary
+project parts a shared `group`, so the loader laid a whole project out as a
+horizontal sheet of adjacent documents. That is the failure mode — not malice, just
+an available-looking mechanism being reused for a different purpose, which is
+exactly what "reserved" forbids.
+
 ## TLDraw-Native UI Rule
 
 **All UI that lives on the TLDraw canvas MUST use TLDraw-native patterns** unless there's a specific, documented reason not to. This means:
