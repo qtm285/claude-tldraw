@@ -138,6 +138,27 @@ every few minutes. Todd was right to act on what it was told; it was told wrong.
 building anything on an agent's awake/idle/hibernating state, verify the state is real —
 and remember `trust the pane, not the roster`.
 
+**When the roster and a report disagree, the terminal breaks the tie.** Not "always
+read the pane" — that's a chore nobody will do. The rule fires on a *disagreement*,
+and it names a winner: the tmux pane. On 2026-07-25 every other surface lied at least
+once, and the pane never did.
+
+- The roster showed `handoffbug` as `shell` for two hours, read as "it never came up."
+  Its pane showed it had **logged in fine**, then `WS connection closed` and every read
+  timing out. It was alive the whole time, holding a task it could not read, and it
+  said so in plain text that nobody looked at.
+- `tlda agent wake handoffbug` returned **"Woke fleet:3d1e9480"**. The pane never
+  changed. Nothing restarted.
+- The spawn mailbox reported **`previous daemon RPC execution outcome is indeterminate`
+  — six times** for agents that were alive and doing the work. It knows it lost track
+  and prints a failure.
+- `chat()` reported **"Notified paw-patrol [available]"** while the server recorded
+  `no-route / no-current-durable-seat` and dropped the message.
+
+The common defect: a surface reporting a belief it cannot support, in a form the
+reader can't distinguish from knowledge. When two of them disagree, don't average
+them and don't pick the convenient one — go read the terminal.
+
 ## GROUND TRUTH: ONE DAEMON. A SECOND DAEMON IS A BUG.
 
 **The core invariant: ONE DAEMON PER ENVIRONMENT.** This is **not** a global machine singleton — we run multiple environments/projects, and each legitimately has its own daemon. The rule is that **exactly one daemon watches a given project/environment** (equivalently: any one agent's JSONL is watched by exactly one daemon). **Two daemons watching the *same* environment** is the bug — that double-watch corrupts activity-card delivery and agent status, and the confused status can even get live agents reaped. So the lock must be **keyed on the environment**, not global: a second daemon for an environment already being watched must refuse to start. A stray daemon (from a worktree, a sandbox, a stray `node bin/fleet-daemon.mjs`) that ends up watching an already-watched environment breaks it — it is **NOT** harmless "because it's just a sandbox daemon."
