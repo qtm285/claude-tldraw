@@ -606,6 +606,36 @@ Read the frames as images to see the full interaction sequence. For a specific m
 
 **Test exactly what the user said is broken.** If the user says "button X doesn't navigate to a new page," the test is: click button X, assert page changed. Not a broader test suite that touches the same code path. Don't test something adjacent and declare the reported issue fixed.
 
+**Don't write unit tests here. A red test after a fix means the test was wrong.**
+Skip, 2026-07-25: *"the fundamental reality of the tests in this app is the tests
+are written to pass. And they don't test anything of any value. Right? Like, if we
+have broken features that are testing passing tests, and then when we fix them,
+they stop passing. Like, it's a sign."* And: *"The approach the, like, unit testing
+approach that agents are using is fundamentally flawed, and I don't really want
+anyone wasting time on it."*
+
+So:
+
+- **A test that goes red because you fixed a bug was pinning the bug in place.
+  Delete it.** Do not carefully migrate it to the new behavior; do not "update the
+  expectation." It was wrong. `rm` trashes rather than shreds, so deleting is cheap
+  and recoverable.
+- **Don't backfill replacements.** Removing three wrong tests does not create a debt
+  of three new ones.
+- **Evidence is observed behavior, not a green suite.** Drive the thing and watch it.
+  A passing suite is not a claim you may relay to Skip as "it works" — see the
+  browser-visible-behavior rule above.
+
+Worked example, 2026-07-25. `tests/chat-image-retry.test.mjs` was **8/8 green while
+the feature visibly flapped** — a broken chat image cycled broken → blank → broken
+on every retry, because each attempt assigned `img.src` on the visible element. The
+moment that was fixed, three of the eight went red: they had asserted the direct
+`img.src` assignment, which *is* the flap. The suite was not merely useless, it was
+holding the defect in place and would have argued against the fix.
+
+This does not license shipping unverified work — it raises the bar. The verification
+Skip wants is that you watched the actual surface do the actual thing.
+
 ## Permissions
 
 These operations are pre-approved for autonomous work:
