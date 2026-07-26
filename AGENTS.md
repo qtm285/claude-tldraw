@@ -554,10 +554,35 @@ Violated once already: `document-columns.mjs` gave ordinary project parts a shar
 
 ### Coherence — the same world for everyone, including the server
 
-**The app's editor is just another machine.** Skip, 2026-07-12: *"the YJS editor is
-just like another person editing the document on their machine with a fucking
-watcher"* — *"it's just another machine. Editing like any other machine."* No
-special priority.
+**There are only peers.** A project's source has several copies, and they are all
+the same kind of thing. They differ *only* in how their edits reach the server:
+
+| peer | how its edits arrive |
+|---|---|
+| your machine | its daemon watches the source dir and pushes |
+| another person's machine | the same |
+| the Yjs editor in the app | server-side; pushes at a write boundary |
+| Overleaf | no daemon of its own, so the server drives its git remote both ways |
+
+Skip, 2026-07-12: *"the YJS editor is just like another person editing the document
+on their machine with a fucking watcher"* — *"it's just another machine. Editing
+like any other machine."* And 2026-07-26: *"Overleaf is essentially just another
+machine except it's one that doesn't have a push daemon."* No peer has priority.
+
+Everything else follows from that and must hold for **every** peer without
+exception: one `expectedRevision` door into the source authority, one three-way
+merge to decide, and a peer that loses gets a git conflict on its own copy and
+holds until a person resolves it.
+
+**So there is one conflict surface, not one per integration.** Overleaf is not an
+integration with its own conflict story; it is the peer that cannot announce
+itself. Its conflicts already enter through the same `processPush` with an
+`expectedRevision`, so an Overleaf conflict *is* a stale-base rejection — it just
+gets caught and rendered afterwards by a bespoke path
+(`overleafSyncStatus`/`overleafConflictFiles`). That is a second representation of
+a conflict the source authority already detected, and unifying **deletes** it
+rather than generalizing it. Any new peer inherits the surface for free; if you
+find yourself adding a per-peer conflict field, you have left the model.
 
 **Writes are checkpoints, not a stream.** This is not live sync and is not a
 Dropbox product. Skip, 2026-07-05: *"our original sync model was not just everyone
@@ -577,8 +602,26 @@ to you."* Not the last machine that pushed — every machine holding the project
 **Conflicts hold, and the person is told.** Skip, 2026-07-12: *"everybody has their
 merge tools. Right? And we have our mirroring system. So if you wind up with a
 fucking conflict, you gotta merge before your shit gets picked up and sent in
-again."* Nothing is silently overwritten — and nothing is silently *stopped*. A
-machine holding a conflict says so where the person can see it, not in a log.
+again."* Nothing is silently overwritten — and nothing is silently *stopped*.
+
+**A conflict is a straight-up git conflict, on the losing peer's own copy.** Skip,
+2026-07-26: *"it should just be a straight up git conflict"* — *"you on your
+editing machine, whether that's the YJS editor or your own machine, would have
+conflict markers and would resolve the issue."* Not a dialog, not a server-side
+resolution, not a bespoke merge UI: markers in the file, resolved with whatever
+tools that peer's person already uses, and the next push flows.
+
+The three-way merge already exists and already emits real markers —
+`classifyThreeWay` in `server/lib/source-lifecycle.mjs` shells out to
+`git merge-file -p` and returns `{ status: 'conflict', merged }`. As of
+2026-07-26 that merged text is stored as evidence and put on the rejection reply,
+and **both the daemon and the browser editor discard it**; the only reader of
+`classifications` in the tree is a test. So the missing piece is delivery, not
+computation. Do not write a second merge.
+
+A peer holding a conflict says so where the person can see it, not in a log, and
+the surface names **which** peer and **which** file — "sync error" with no party
+attached is unactionable the moment more than one person is in the project.
 
 **Everything the project talks about is versioned.** Skip, 2026-07-16: *"the whole
 fucking idea of this project as world thing was to have fucking versioned
