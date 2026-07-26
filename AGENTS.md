@@ -491,6 +491,29 @@ This is why adjacent documents are wrong: things laid side by side invite pannin
 between them, which is walking. Distance or a page boundary is what makes the jump
 the only route.
 
+## Chat is human chat
+
+Skip, 2026-07-25: *"human chat is chat. Chat is human chat. And, like, we
+shouldn't be bothering agents with spam either."*
+
+Chat is for conversation — between people, and between people and agents. **It is
+not a log.** Infrastructure does not narrate itself there, and that holds for
+agent recipients as much as for Skip.
+
+**Routine success and progress are silent.** Notification attempted / deferred /
+queued / delivered, materialization progress, spawn-mailbox plumbing: diagnostics.
+Keep them queryable; keep them out of the panel. There were **613,369**
+`notification_attempt` events rendered as chat by 2026-07-26, which is what made a
+chat panel unreadable.
+
+**Genuine failure surfaces — and must be genuine.** A wake that truly didn't
+arrive, a file that truly didn't materialize, a spawn that truly didn't start:
+those change what you can expect and hiding them is worse. But a failure channel
+that cries wolf trains everyone to ignore it. The spawn mailbox reported failure
+seven times in one evening for agents that were alive and working, and the chief
+stopped reading it. **Fix the honesty before silencing the noise** — silencing
+first just hides the lies.
+
 ## Columns are reserved space
 
 **Placement is explicit. Nothing is put side by side implicitly.** Skip,
