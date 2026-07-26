@@ -743,7 +743,7 @@ Author's machine                     Server (localhost or remote, port 5176)
 └──────────────────┘                 └──────────────────────────────┘
 ```
 
-**Server URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/daemon.yaml`'s `servers:` map. The active server is named by `defaultServer` (or `TLDA_CONFIG`). Every `servers:` entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active server's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing server or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
+**Server URL resolution:** `getServerUrl()`/`getFleetServerUrl()` in `shared/config.mjs` resolve through `~/.config/tlda/server.yaml`'s `servers:` map. The active server is named by `defaultServer` (or `TLDA_CONFIG`). Every `servers:` entry must explicitly contain `{ database, store, licenseKey }`; an empty-string `licenseKey` means explicitly unlicensed. Bare `url`, database-to-store, and shared top-level license fallbacks are rejected. `getServerUrl()` returns the active server's `store` (doc assets + shape sync); `getFleetServerUrl()` returns its `database` (fleet/chat/registry). A missing server or missing field fails loudly — there is no localhost fallback. The CLI adds a per-command `--server` override on top of `getServerUrl()`.
 
 **config.json is retired.** Server selection and build settings live in
 `server.yaml`; machine, permissions, models, tmux, and task-document settings
@@ -751,9 +751,9 @@ live in `daemon.yaml`; bots live in `bots.yaml`; ordinary CLI preferences live
 in `cli.yaml`; tokens live in `~/.config/tlda/tokens.json` (or token env vars).
 Secrets never live in YAML. There are no generic config fallbacks.
 
-**Split database/store config:** The active server's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `daemon.yaml servers:` instead.
+**Split database/store config:** The active server's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `server.yaml servers:` instead.
 
-**Testing against an alternate server — use `--config`, never edit `defaultServer`.** `~/.config/tlda/daemon.yaml` holds a `servers:` map of named servers (each a complete `{ database, store, licenseKey }` entry) and a `defaultServer` naming the active one. `defaultServer` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate server by name for that run only:
+**Testing against an alternate server — use `--config`, never edit `defaultServer`.** `~/.config/tlda/server.yaml` holds a `servers:` map of named servers (each a complete `{ database, store, licenseKey }` entry) and a `defaultServer` naming the active one. `defaultServer` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different server (e.g. the Mac Mini), select an alternate server by name for that run only:
 
 ```bash
 tlda doc open bregman --config wmtry     # flag, this run only (place it after the command)
