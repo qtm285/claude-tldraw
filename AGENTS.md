@@ -924,6 +924,20 @@ preferences live in `cli.yaml`; tokens live in `~/.config/tlda/tokens.json` (or
 token env vars). Secrets never live in YAML. There are no generic config
 fallbacks.
 
+**Display timezone.** `server.yaml`'s `timezone:` (an IANA name, e.g.
+`America/New_York`) is the zone human-readable times render in. Absent = the host
+machine's own zone, which is why it matters on Fly: that container's zone is UTC,
+so anything it renders read as UTC to everyone. Format through
+`shared/display-time.mjs`; a bad zone name throws at config load.
+
+**Convert at the point of display, never at the point of storage.** Stored
+timestamps, JSON log lines, API payload fields, and anything compared, sorted, or
+range-filtered stay UTC/ISO — a timezone-shifted stored timestamp is data
+corruption, and the T-vs-space hazard above shows how quietly that goes wrong. If
+a timezone change alters what gets *written*, it is the wrong change. The browser
+is exempt from the whole question: it knows its viewer's zone, so client code
+uses plain `toLocaleString()` and needs no server plumbing.
+
 **Split database/store config:** The active environment's `database` axis is fleet/chat/registry/agents; the `store` axis is doc assets + shape sync. Do not use old `TLDA_SYNC_SERVER` guidance; edit `daemon.yaml environments:` instead.
 
 **Testing against an alternate environment — use `--env`, never edit `environments.default`.** `~/.config/tlda/daemon.yaml` holds named environments under `environments.values` (each a complete `{ database, store, licenseKey }` entry) and `environments.default` names the active one. `environments.default` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different environment (e.g. the Mac Mini), select an alternate environment by name for that run only:
