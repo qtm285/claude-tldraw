@@ -517,7 +517,7 @@ An agent edited a live dev-bot file this way, adding an import of a symbol that 
 
 **IMPORTANT: Always use `tlda server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `tlda server stop` to stop, `tlda server status` to check.
 
-**If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda doc errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
+**If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda project errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
 
 ## Markdown Format
 
@@ -525,7 +525,7 @@ tlda supports a `markdown` format for lightweight notes and scratch documents. N
 
 ```bash
 # Link a markdown project
-tlda doc link my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
+tlda project link my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
 # --main defaults to the first .md file found in the dir
 
 # The fleet daemon auto-detects .md changes and rebuilds
@@ -975,7 +975,7 @@ uses plain `toLocaleString()` and needs no server plumbing.
 **Testing against an alternate environment — use `--env`, never edit `environments.default`.** `~/.config/tlda/daemon.yaml` holds named environments under `environments.values` (each a complete `{ database, store, licenseKey }` entry) and `environments.default` names the active one. `environments.default` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different environment (e.g. the Mac Mini), select an alternate environment by name for that run only:
 
 ```bash
-tlda doc open bregman --env wmtry     # flag, this run only (place it after the command)
+tlda project open bregman --env wmtry     # flag, this run only (place it after the command)
 TLDA_ENV=wmtry tlda agent create ...  # env form, same effect
 tlda daemon start --env wmtry         # the daemon + every agent it spawns target wmtry
 ```
