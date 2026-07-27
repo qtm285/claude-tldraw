@@ -2,7 +2,7 @@
 
 
 <!-- lane:auto:start lane=app hash=f90da080926e -->
-<!-- Auto-generated guidance for this project. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). -->
+<!-- Mirrored from ~/work/dot-claude/reference/lane-app.md. Nothing regenerates this: there is no generator, so a change to either copy must be made to both by hand. Do not edit between the markers without also editing that file. -->
 ## App-development guidance (tlda/app lane)
 
 This is the complete contract for agents building the tlda app. It is short on
@@ -271,6 +271,28 @@ the path was already handling it, and the agent had not read far enough to know 
 Skip: *"Did I say chat was out of order? No. I fucking didn't… I identified two message
 types. You saw an issue in the code. That presumably is a non issue and you changed
 everything."*
+
+**If you have to document something being shitty, consider making it either gone or
+not shitty.** Skip's rule, 2026-07-27, in his words.
+
+Writing a doc is not the cheap option it feels like. A caveat has to be read by every
+future reader, it rots the moment the code moves, and it converts a defect into a
+permanent tax on everyone downstream. So when you catch yourself writing *"this is not
+currently implemented"*, *"this control does not do what its label says"*, or *"this
+step will fail with the current CLI"* — **stop and price the fix.** It is usually
+smaller than you assume, and it is always smaller than the caveat's lifetime cost.
+
+Both escapes count. Deleting the broken thing is as good an answer as repairing it,
+and often better — see the next rule.
+
+Worked example the day the rule was stated. A documentation pass turned up three of
+these in an hour. `tlda-fly friend up` ended in `tlda doc link`, a noun the CLI no
+longer accepts, so provisioning could not finish; the honest caveat was written, and
+the fix turned out to be three tokens in one file. The project list carried a **Git
+mirror sync** checkbox whose label described build mirroring while the control
+actually governed linked-remote sync; the doc was rewritten twice to explain the
+mismatch before Skip said to delete the checkbox. Both caveats are gone because the
+things they described are gone.
 
 **Tear it out. Don't add epicycles.** Skip's rule, in his words: *"the fix for almost
 every problem with this app is deleting code nobody asked for — much of which I'm
@@ -588,10 +610,15 @@ Since `signal:reload` is fire-and-forget, the viewer includes a missed-reload gu
 ## Project as world
 
 **This section is the contract, not a description of the app.** Several clauses
-below are not true of the code today — as of 2026-07-26, source pushes mirror back
-to one machine rather than every connected one, and a rejected push is never
-delivered to anyone as a conflict to resolve. Read every clause as what the app
-owes, and grep before believing any of it describes current behavior. (Written
+below are not true of the code today. Read every clause as what the app owes, and
+grep before believing any of it describes current behavior.
+
+This paragraph used to name two specific gaps — that pushes mirror back to one
+machine, and that a rejected push is never delivered as a conflict. **Both were
+closed, and the text outlived them by a day**, which is the exact rot it warns
+about: an agent reads a gap that no longer exists and builds a second copy of
+something that already works. Check `mirrorShadow` and `writeConflictsToWorkingCopy`
+before believing either is missing. (Written
 flat, a spec reads as a survey of a working system; that is how this file came to
 promise two config guards that had been deleted.)
 
@@ -716,12 +743,17 @@ holds until a person resolves it.
 **So there is one conflict surface, not one per integration.** Overleaf is not an
 integration with its own conflict story; it is the peer that cannot announce
 itself. Its conflicts already enter through the same `processPush` with an
-`expectedRevision`, so an Overleaf conflict *is* a stale-base rejection — it just
-gets caught and rendered afterwards by a bespoke path
-(`overleafSyncStatus`/`overleafConflictFiles`). That is a second representation of
-a conflict the source authority already detected, and unifying **deletes** it
-rather than generalizing it. Any new peer inherits the surface for free; if you
-find yourself adding a per-peer conflict field, you have left the model.
+`expectedRevision`, so an Overleaf conflict *is* a stale-base rejection.
+
+There is a bespoke pair of fields beside it — `overleafSyncStatus` and
+`overleafConflictFiles` — and this file used to say they caught and rendered that
+conflict afterwards. **They do not.** `server/lib/overleaf-sync.mjs` only ever
+writes `'ok'` or `'error'`, and only ever writes `overleafConflictFiles` as `[]`;
+no code path anywhere produces the conflict state. The client has readers for it.
+So it is not a second representation of the conflict — it is a **vestigial** one
+that never fires, and the work is to **delete both fields and their readers**, not
+to make them work. Any new peer inherits the one real surface for free; if you find
+yourself adding a per-peer conflict field, you have left the model.
 
 **Writes are checkpoints, not a stream.** This is not live sync and is not a
 Dropbox product. Skip, 2026-07-05: *"our original sync model was not just everyone
