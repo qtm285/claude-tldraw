@@ -497,6 +497,10 @@ Three separate agents lost work to this in one night, 2026-07-27, in three diffe
 
 **Know when the thing you're watching for actually happens.** A room query 6 seconds after load returned "no duplicate shapes" and nearly closed a bug as unreproducible; the emitter fires at **88 seconds**. Absence at the wrong moment is not absence.
 
+**The general form: prefer an instrument that cannot miss the thing, over one that measures where you expect the thing to be.** An instrument that can only see where you pointed it will confirm you. `slowquery.log` wraps `.all()` and `.get()` and never `.run()` — so it is *structurally blind to every write*, and the profiler attributes over six minutes of event-loop time to writes that appear in no log. The log was not wrong; it could not see. The loop-gap probe finds blocking whether or not it can see the code causing it, which is why it found what the query log could not.
+
+**And run the counterfactual before you believe your own explanation.** A fixed build behaving correctly is consistent with **any** story about what was broken. Revert your fix and watch the broken build fail *in the specific way you claimed* — three times in one night that was the only thing that caught a wrong answer, once after the claim had already been relayed to Skip. This matters most where a check can't help you: a lint rule catches a missed `await`, but it cannot tell you whether a converted path still routes a wake to the right agent.
+
 ## Where the working copy is the deployment
 
 The bot repos under `~/work/tlda-bots/` have **no build step**. The `.mjs` on disk is the program that runs, and the bot loads it fresh on every restart. So **"I edited it but didn't commit" is not a draft — it is a live change waiting for the next restart.**
