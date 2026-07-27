@@ -611,7 +611,7 @@ in it."* It holds documents, and the documents are places.
 
 **The naming is wrong.** Skip, 2026-07-25: *"probably we're gonna have to stop
 calling docs docs when they're ultimately projects. And a document is like a place
-spatially."* What the code calls a **doc** — `?doc=`, `docName`, `DocContext`,
+spatially."* What the code calls a **doc** — `?project=`, `docName`, `DocContext`,
 `/api/projects/:doc` — is the **project**. A **document** is a **place within it**,
 reached by jumping.
 
@@ -1126,7 +1126,7 @@ Current app code still uses `deleteShapes` in some paths, so do not make blanket
 
 **Chromium is the default; WebKit is usually a waste of time.** Don't routinely re-run in WebKit — only reach for it when you have a *concrete, reproduced* Safari-specific bug to chase (e.g. a behavior Skip reports on iPad/Safari that you can't reproduce in Chromium). Routine "let me also check WebKit" passes burn time for no signal.
 
-**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari https://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
+**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari https://localhost:5176/?project=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
