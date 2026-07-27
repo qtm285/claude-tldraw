@@ -872,10 +872,19 @@ Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-
 
 Browser/UI tests that create fleet shapes in a real document room must clean up every shape and anchor they create before exiting. Do not leave test identities, alien-device shapes, or generated fleet layouts in shared rooms like `bregman`; persisted room pollution makes real review sessions look like multiple layouts are fighting each other.
 
-**Phone behavior comes from the selected phone layout, not device detection.** Do not add
-product rules keyed to Skip's device id, viewport identity, or a guess that a session is
-"the user's phone." Existing device-specific paths may remain only when they already have
-a documented reason; new pane and layout behavior must be driven by the selected layout.
+**There is no phone behavior.** Skip, 2026-07-27: *"There is no phone behavior. All
+there is is a phone friendly UI. Like, everything is just designed so it works okay on
+the phone."*
+
+So there is no phone mode, no phone layout, and nothing to detect. Do not add product
+rules keyed to a device id, a viewport identity, or a guess that a session is "the
+user's phone" — and do not write a phone branch beside a desktop branch. One rule that
+works at every size, or it isn't the rule.
+
+Worked example, the same day: the chat panel is sized to the visible viewport minus a
+small inset, with its aspect ratio capped at square. On a phone the inset does the work
+and the cap never binds; on a wide screen the cap does. **One rule, both cases** — not a
+phone path and a desktop path.
 
 **Incidental, tolerated issue — junk human identities.** The WS `register` handler (`server/unified-server.mjs`) stores whatever `id` the client sends, verbatim. The production identity flow (`registerHuman`) always sends `fleet:<sanitized-name>`, but **test scripts call `register` directly with arbitrary ids** (numeric floats like `2.0`, `7.0`, `261710.0`), creating human-agent rows whose id is not `fleet:`-prefixed. A session that logs in as one of those test names gets the malformed id, and fleet shapes it creates get that id as their `userId`.
 
