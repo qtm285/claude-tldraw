@@ -871,6 +871,47 @@ The prop list in `sync-rooms.mjs` must exactly mirror the shape's `static props`
 
 When adding a UI control inside existing chrome, inspect the neighboring controls first and match their layout behavior and visual weight. Do not introduce a boxed button, reserve new text space, or push nearby content unless the adjacent controls do the same.
 
+**The HUD is see-through on purpose. Do not make it opaque.** Skip, 2026-07-27:
+*"The transparency is deliberate. Right? That's what a HUD is. You can see through
+it. Otherwise it would hide parts of the document you actually wanted it to be
+over."*
+
+Every fleet HUD panel — `fleet-chat`, `fleet-agents`, `fleet-inbox`,
+`fleet-docview`, `fleet-search` — renders at **70% opacity**, and it looks like an
+accident when you find it. `src/SvgDocument.tsx` sets the default *pen* style for
+hand-drawn annotations (violet, size s, `setOpacityForNextShapes(0.7)`), and in
+tldraw that default lands on every shape created afterwards, including panels
+created through `createOwnedFleetPanelShape`. The opacity default arrived
+2026-02-06; fleet shapes arrived 2026-03-27. **So the panels have been translucent
+since the day they shipped, and Skip has worked in them ever since.** It is the
+shipped behaviour, and per the comment-is-not-a-spec rule that makes it the
+requirement.
+
+Worked example the day this was written. Skip reported that markdown text rendered
+*above* the HUD. It does not: measured on his live tab, the page sat at z-index
+`8001`, the HUD chat pane at `8007`, and `elementsFromPoint` at the overlap
+returned HUD content first and the document iframe sixteenth. He was reading the
+document **through** the panel. Three theories died before that measurement — a
+tldraw z-index counter climbing past the HUD (killed by his *"this is happening on
+a single page document"*), the wrapper failing to establish a stacking context
+(killed by reading its computed style), and a `!important` z-index clamp that its
+own author reported would not have fixed the failure.
+
+**And the thing he actually saw was a different bug that had already been
+reverted** — a HUD-anchor change that dropped his default layouts into the middle
+of the text. Once the HUD sat over prose, the deliberate transparency read as text
+on top. Skip: *"I observed the error because we had another bug that placed the HUD
+on top of the document."*
+
+Two rules fall out, and they are the general lesson, not trivia about opacity:
+
+- **Separate the report from the mechanism.** *"The markdown is above the HUD"* was
+  a true observation of the screen and a wrong theory of the cause. The observation
+  is authoritative; the theory is a lead.
+- **A visual default that looks accidental may be four months of shipped design.**
+  Before removing one, find out when it arrived and whether Skip has lived with it.
+  `git log -S` costs a minute; changing how his workspace looks costs his trust.
+
 **tlda is a platform for reading.** It exists to let the user focus on the math, and it is not supposed to be shouty. The chrome's job is to recede so the paper is the subject. Unrequested UI changes or added prominence are not just scope creep; they break the product's core purpose by making a quiet reading surface shouty.
 
 **Do not change the UI unless explicitly asked.** No making your feature more prominent, no added chrome/controls, no bells and whistles, no visual redesign. If your task touches a UI file, make ONLY the requested change and leave everything else exactly as it looks. Agents are not visual designers and consistently underestimate how destructive unrequested UI changes are to the experience — so the rule is simply: don't touch the UI you weren't asked to touch.
