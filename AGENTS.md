@@ -611,16 +611,17 @@ in it."* It holds documents, and the documents are places.
 
 **The naming is wrong.** Skip, 2026-07-25: *"probably we're gonna have to stop
 calling docs docs when they're ultimately projects. And a document is like a place
-spatially."* What the code calls a **doc** — `?project=`, `docName`, `DocContext`,
-`/api/projects/:doc` — is the **project**. A **document** is a **place within it**,
+spatially."* What the code historically called a **doc** — now `?project=`,
+`projectName`, `ProjectContext`, and `/api/projects/:project` — is the
+**project**. A **document** is a **place within it**,
 reached by jumping.
 
 This is why the model has no document identity: the word was already spent. There
-is exactly one `DocContext` per viewer, carrying the *project*, so nothing can say
+is exactly one `ProjectContext` per viewer, carrying the *project*, so nothing can say
 "this thing belongs to document X." That's not an oversight, it's the vocabulary
 leaking into the design.
 
-Consequence to know before you touch layout: with one `DocContext`, the Yjs source
+Consequence to know before you touch layout: with one `ProjectContext`, the Yjs source
 editor edits **the loaded project's file**, not whatever it sits beside. Put two
 different documents side by side and it will silently keep editing the loaded one.
 
