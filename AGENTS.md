@@ -872,8 +872,6 @@ Per-device fleet shapes are the types in `FLEET_SHAPE_TYPES` (`src/shapes/fleet-
 
 Browser/UI tests that create fleet shapes in a real document room must clean up every shape and anchor they create before exiting. Do not leave test identities, alien-device shapes, or generated fleet layouts in shared rooms like `bregman`; persisted room pollution makes real review sessions look like multiple layouts are fighting each other.
 
-**Phone fleet layout sizing.** The phone default layout uses three horizontal full-screen snap lanes: agents/inbox, chat, and document. The **chat panel itself** is one phone viewport wide and one phone viewport tall; the agents/inbox lane sits immediately to its left with the same lane width and total height. The document lane is one viewport to the right of chat. Do not make a combined agents+inbox+chat footprint define the snap size — each lane owns one viewport-width stop.
-
 **Phone behavior comes from the selected phone layout, not device detection.** Do not add
 product rules keyed to Skip's device id, viewport identity, or a guess that a session is
 "the user's phone." Existing device-specific paths may remain only when they already have
