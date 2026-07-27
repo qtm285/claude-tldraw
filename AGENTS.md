@@ -487,6 +487,22 @@ Run `tlda --help` / `tlda <noun> --help` for the command list — don't duplicat
 
 **Never use `tlda build` to work around pipeline issues.** It bypasses change detection and masks bugs. If something isn't rebuilding when it should, fix the pipeline.
 
+## A tool that returns nothing is not a tool that found nothing
+
+Three separate agents lost work to this in one night, 2026-07-27, in three different tools. Before you report a check as passing, know the difference between *it looked and found nothing* and *it never looked*.
+
+**Typecheck with `tsc -b --force`, never `tsc --noEmit -p tsconfig.json`.** The root `tsconfig.json` is a solution file — `"files": []` plus project references — so `-p` typechecks **zero files and exits 0 on any input whatsoever**. It does not follow references. Demonstrated on the same file at the same moment: `-p tsconfig.json` → clean; `-b --force` → `src/editorSetup.ts(447,38): error TS2345`. An agent reported "typechecked", broke `main`, and the deploy refused to ship. `-b` is the operative part; keep `--force` too, because a worktree with symlinked `node_modules` can serve a stale buildinfo as a cache hit.
+
+**Grep the bundle the browser actually fetches.** `/app/dist/assets` holds several `index-*.js`; only one is served. Read `/app/dist/index.html` first to learn which, then grep that file. Grepping the directory passes or fails depending on which file it hits, and grepping `*.js.map` proves the code was **built**, not that it shipped — the chief made exactly that mistake and reported a fix as verified off a sourcemap.
+
+**Know when the thing you're watching for actually happens.** A room query 6 seconds after load returned "no duplicate shapes" and nearly closed a bug as unreproducible; the emitter fires at **88 seconds**. Absence at the wrong moment is not absence.
+
+## Where the working copy is the deployment
+
+The bot repos under `~/work/tlda-bots/` have **no build step**. The `.mjs` on disk is the program that runs, and the bot loads it fresh on every restart. So **"I edited it but didn't commit" is not a draft — it is a live change waiting for the next restart.**
+
+An agent edited a live dev-bot file this way, adding an import of a symbol that did not yet exist in `main`'s `packages/bot`. A missing named ESM export is a **link-time** error, so the bot would not have misbehaved — it would have **failed to start**, and presented as an unrelated bot outage hours later. It never fired only because the running process predated the edit. Hold changes as a patch instead, and land the dependency first.
+
 **The CLI does not start a server.** Skip: *"most users of the CLI will not be their own server host."* A command that needs a server and can't reach one says so and stops. Currently violated by `ensureServer()` in `cli/tlda.mjs` — sixteen commands call it and it runs `server start` when the configured server is local. Delete it and its call sites; don't add another exemption like the one already at `cli/tlda.mjs:4605`.
 
 **Server connectivity must not gate local capability.** Skip: *"the things that interact with the server fully work, but they should partially work."* `mint` makes the tmux session and launches the harness locally, then registers the seat remotely — the local half shouldn't be refused because the remote half is unreachable. This is **not** a licence for local fallbacks: when the server can't reach a file on an agent's machine that is a real impossibility, and the answer is still 503.
