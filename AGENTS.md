@@ -727,11 +727,18 @@ tools that peer's person already uses, and the next push flows.
 
 The three-way merge already exists and already emits real markers —
 `classifyThreeWay` in `server/lib/source-lifecycle.mjs` shells out to
-`git merge-file -p` and returns `{ status: 'conflict', merged }`. As of
-2026-07-26 that merged text is stored as evidence and put on the rejection reply,
-and **both the daemon and the browser editor discard it**; the only reader of
-`classifications` in the tree is a test. So the missing piece is delivery, not
-computation. Do not write a second merge.
+`git merge-file -p` and returns `{ status: 'conflict', merged }`. **Delivery now
+exists on both halves, as of 2026-07-26:** the browser editor reads the merged
+text (`FleetSourceEditorShape.tsx:272`) and the daemon writes it into the peer's
+own working copy (`writeConflictsToWorkingCopy`, `daemon/source-sync.mjs`). Do
+not write a second merge, and do not re-add a delivery path — check these two
+before concluding either end is missing.
+
+This paragraph said the opposite until 2026-07-26 — that both ends discarded the
+merged text and the only reader was a test. That was true when written and became
+false the same night, understating what the app does. It is the direction of rot
+nobody checks: an agent reads a clause like this, believes a thing is missing, and
+builds a second one.
 
 A peer holding a conflict says so where the person can see it, not in a log, and
 the surface names **which** peer and **which** file — "sync error" with no party
