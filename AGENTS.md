@@ -517,7 +517,7 @@ An agent edited a live dev-bot file this way, adding an import of a symbol that 
 
 **IMPORTANT: Always use `tlda server start` to start the server.** It daemonizes properly and writes a PID file. NEVER use `node server/unified-server.mjs &` or run it in a background task — the server dies when the parent exits, leaving a zombie that holds the port but doesn't serve requests. Use `tlda server stop` to stop, `tlda server status` to check.
 
-**If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda doc errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
+**If the app is broken, fix it yourself — it's your responsibility, not ops's.** Diagnose and repair build/service/viewer problems using the tools in this file (logs, `tlda-dev pw`, `tlda project errors`, etc.) the same way you'd fix any other bug. Only escalate to **ops** for things genuinely outside app-dev's reach: the physical machine, deploy pipeline, daemon/process supervision, or auth. Reflexively handing off ordinary app brokenness to ops is the wrong instinct — don't do it.
 
 ## Markdown Format
 
@@ -525,7 +525,7 @@ tlda supports a `markdown` format for lightweight notes and scratch documents. N
 
 ```bash
 # Link a markdown project
-tlda doc link my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
+tlda project link my-notes --dir ~/work/notes/ --format markdown --title "My Notes"
 # --main defaults to the first .md file found in the dir
 
 # The fleet daemon auto-detects .md changes and rebuilds
@@ -611,16 +611,17 @@ in it."* It holds documents, and the documents are places.
 
 **The naming is wrong.** Skip, 2026-07-25: *"probably we're gonna have to stop
 calling docs docs when they're ultimately projects. And a document is like a place
-spatially."* What the code calls a **doc** — `?doc=`, `docName`, `DocContext`,
-`/api/projects/:doc` — is the **project**. A **document** is a **place within it**,
+spatially."* What the code historically called a **doc** — now `?project=`,
+`projectName`, `ProjectContext`, and `/api/projects/:project` — is the
+**project**. A **document** is a **place within it**,
 reached by jumping.
 
 This is why the model has no document identity: the word was already spent. There
-is exactly one `DocContext` per viewer, carrying the *project*, so nothing can say
+is exactly one `ProjectContext` per viewer, carrying the *project*, so nothing can say
 "this thing belongs to document X." That's not an oversight, it's the vocabulary
 leaking into the design.
 
-Consequence to know before you touch layout: with one `DocContext`, the Yjs source
+Consequence to know before you touch layout: with one `ProjectContext`, the Yjs source
 editor edits **the loaded project's file**, not whatever it sits beside. Put two
 different documents side by side and it will silently keep editing the loaded one.
 
@@ -974,7 +975,7 @@ uses plain `toLocaleString()` and needs no server plumbing.
 **Testing against an alternate environment — use `--env`, never edit `environments.default`.** `~/.config/tlda/daemon.yaml` holds named environments under `environments.values` (each a complete `{ database, store, licenseKey }` entry) and `environments.default` names the active one. `environments.default` is **shared** — every CLI call, the daemon, the server, and every spawned agent's MCP resolve through it. To point *one run* at a different environment (e.g. the Mac Mini), select an alternate environment by name for that run only:
 
 ```bash
-tlda doc open bregman --env wmtry     # flag, this run only (place it after the command)
+tlda project open bregman --env wmtry     # flag, this run only (place it after the command)
 TLDA_ENV=wmtry tlda agent create ...  # env form, same effect
 tlda daemon start --env wmtry         # the daemon + every agent it spawns target wmtry
 ```
@@ -1126,7 +1127,7 @@ Current app code still uses `deleteShapes` in some paths, so do not make blanket
 
 **Chromium is the default; WebKit is usually a waste of time.** Don't routinely re-run in WebKit — only reach for it when you have a *concrete, reproduced* Safari-specific bug to chase (e.g. a behavior Skip reports on iPad/Safari that you can't reproduce in Chromium). Routine "let me also check WebKit" passes burn time for no signal.
 
-**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari https://localhost:5176/?doc=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
+**Never tell the user to force-refresh.** Open a new tab instead: `open -a Safari https://localhost:5176/?project=NAME` or use `tlda-dev pw` to open a fresh page. A new tab has no cache to worry about.
 
 **When you DO chase a Safari-specific bug:** don't claim "it'll work in real Safari" without justification — if WebKit fails, explain why (e.g. a known TDZ bug in minified bundles under strict mode) or don't claim it. If a bug isn't reproducible at all, set it up before involving the user: open the page, use `tlda-dev pw` to scroll and screenshot as much as possible, and give them a specific thing to confirm rather than "go check if it works."
 
