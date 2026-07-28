@@ -850,6 +850,21 @@ seven times in one evening for agents that were alive and working, and the chief
 stopped reading it. **Fix the honesty before silencing the noise** — silencing
 first just hides the lies.
 
+**Message visibility is not the same thing as the explicit recipient field.** Skip's
+ground truth, 2026-07-28: *"I see messages to me and the agents I'm talking to."*
+So a message addressed to an agent can still be visible to Skip when it is in a
+conversation he is watching. Do not infer "Skip cannot see this" from `to:
+chief13`, `to: on-call`, or any other agent-targeted delivery field.
+
+Before changing alert recipients, read both the sender's actual target rule and
+the UI visibility contract for the surface Skip is using. If Skip asks why he did
+or did not see something, answer from those two facts; do not "fix" it by adding
+him to the target list unless the alert is supposed to become a user-visible
+notification. Current example: `bots/dev-bot.mjs` defaults
+`TLDA_DEV_BOT_NUDGE_LABEL` to `on-call`, filters out humans and bots, and sends
+testing failures to matching agents. That proves the delivery target; by itself,
+it proves nothing about whether Skip's current fleet view renders that message.
+
 ## TLDraw-Native UI Rule
 
 **All UI that lives on the TLDraw canvas MUST use TLDraw-native patterns** unless there's a specific, documented reason not to. This means:
