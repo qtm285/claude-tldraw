@@ -2,7 +2,7 @@
 
 
 <!-- lane:auto:start lane=app hash=f90da080926e -->
-<!-- Mirrored from ~/work/dot-claude/reference/lane-app.md. Nothing regenerates this: there is no generator, so a change to either copy must be made to both by hand. Do not edit between the markers without also editing that file. -->
+<!-- Auto-generated guidance for this project. Do not edit between the markers — edit reference/lane-app.md and regenerate (bin/gen-agents.mjs). Both paths are relative to ~/work/dot-claude. -->
 ## App-development guidance (tlda/app lane)
 
 This is the complete contract for agents building the tlda app. It is short on
