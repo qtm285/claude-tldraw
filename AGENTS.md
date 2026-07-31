@@ -109,6 +109,37 @@ The product and authority model is documented in
   transaction boundary. Preserve the separate Git fetch/push semantics of linked
   remotes.
 
+### Names and labels are one namespace
+
+A friendly name is a label with a unique living occupant. That is the only
+difference between them: both are strings an agent answers to, and the
+uniqueness constraint over living agents applies to names alone.
+
+- **Uniqueness is a database constraint**, the partial unique index
+  `idx_agents_live_name` on `agents(friendly_name) WHERE dead = 0`. It is the
+  namespace rule. Do not add a code check beside it; a second check drifts.
+- **It is an error to set an invalid label**, rejected at write and loudly. A
+  label that cannot be addressed must not become a filter that quietly matches
+  nothing. `checkNameAvailable` is that gate — unavailable-to-you has one gate
+  and one error shape, whether the reason is an unaddressable string, a reserved
+  routing label (`here`, `away`, `awake`, `hibernating`, `dead`, `human`), or a
+  name a living agent already occupies. Add a reason there rather than a path
+  beside it.
+- **Addressability is the filter grammar's rule**, not a matter of taste: a
+  token is a maximal run of characters that are not whitespace or `& | ! ( )`.
+  A string containing one of those still stores, then returns zero matches with
+  no error from `roster`, `chat(to:)`, `thread`, and `search`, while a panel
+  filter keeps matching because it hands the leaf straight to the evaluator. Do
+  not impose a stricter charset because it looks tidier.
+
+Label membership is **lexical**: a filter over history asks who held the label
+at each event's timestamp, joining `label_history` spans, while live delivery
+recomputes membership per event. That asymmetry is deliberate and it is the more
+expensive thing to build. Making history read current membership would be
+dynamic scope, and the same query would return different history depending on
+when it ran. `delegate`'s `mint.labels` exists so a label can be set before the
+agent's first tool call, which is what puts its whole backlog inside the span.
+
 ### The authorization gate is a fence, not a wall
 
 The authorization gate exists so an agent does not casually change something it
