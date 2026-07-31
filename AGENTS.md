@@ -47,6 +47,65 @@ Do not hand back work that visibly fails the request and ask for a check. A
 review is for a judgement call that is genuinely the requester's, not for
 finding defects the author could have found.
 
+## Your team is your team
+
+An agent Skip spawned and briefed himself is his, not yours. Do not re-brief it,
+do not manage it, do not relay his words back to it, and do not answer questions
+he asked it. He can say what he wants far better than you can restate it, and a
+restatement is worse than silence: you understand the task less well than either
+of them, so what you add is noise wearing the shape of context.
+
+This holds even when you are the coordinator, even when you have relevant
+findings, and even when the agent is working on something adjacent to yours. If
+you have something it genuinely needs, tell Skip, and let him decide whether to
+pass it on.
+
+Agents you spawned are yours to brief and yours to answer for.
+
+**When he asks you to tell an agent something, tell it that thing.** Not a task
+built around it. If the agent he named does not exist yet, say so and stop —
+minting your own and handing it a job is not a way of passing information along,
+it is starting a second piece of work he did not ask for, against a brief only
+you have seen. That cost him an hour once.
+
+## Look for what broke it
+
+When something Skip used to have stops working, it is a regression until proven
+otherwise. Do not reason forward from the current code toward "this was never
+built" — agents merge bad code, and agents merge over fixes. Both happen here
+regularly, and the result looks identical to a missing feature.
+
+The cheap moves, in order: `git log -S` the symbol on the failing path; check
+whether a fix exists on an unmerged branch; and when some cases work and others
+do not, find the boundary between them rather than reading the working path
+forward. A split — eleven agents have the field and a hundred and eighty-seven
+do not — locates a commit faster than any amount of tracing.
+
+One night produced three of these: a blessed implementation that was never
+merged, themes that had landed hours before an agent was sent to find them, and
+a field that stopped being written that day. Each was first reported as absent.
+
+## Never hand Skip a URL carrying someone else's name
+
+`?name=` sets the identity of whoever opens the link, and opening it **persists**
+that name to their browser profile. It is a testing affordance: on a test server,
+on a different machine, with its own identity space, `&name=tester` is correct and
+stays correct.
+
+A link sent to Skip is none of those things. Give him a URL with a name on it and
+you have changed who he is in his own app, silently, until something else changes
+it back. He does not click a name that isn't his; do not put one in front of him.
+
+So: strip `name=` from any URL you hand him. Token and project parameters are
+fine. If a link only makes sense with an identity attached, it is a link for a
+test browser, not for him.
+
+**There is no code fix and none is wanted.** `?name=` persisting is the feature
+working — a name in the URL is how you say who you are, and persisting it is how
+you stay that person. The behaviour is correct; sending Skip such a link is the
+mistake. Do not propose making the write conditional, adding a confirmation, or
+scoping it to the tab, and do not raise it with him again.
+
 ## Verify the relevant surface
 
 The user-visible surface is authoritative for user-visible behavior. Builds,
@@ -109,6 +168,117 @@ The product and authority model is documented in
   transaction boundary. Preserve the separate Git fetch/push semantics of linked
   remotes.
 
+### Names and labels are one namespace
+
+A friendly name is a label with a unique living occupant. That is the only
+difference between them: both are strings an agent answers to, and the
+uniqueness constraint over living agents applies to names alone.
+
+- **Uniqueness is a database constraint** — a partial unique index, which is how
+  "one living agent per name" is expressible at all:
+
+  ```sql
+  CREATE UNIQUE INDEX idx_agents_live_name
+  ON agents(friendly_name) WHERE dead = 0 AND friendly_name IS NOT NULL
+  ```
+
+  A second living holder of a name is unrepresentable. Do not add a code check
+  beside it; a parallel check drifts and the index is the one that wins.
+- **The index covers names against names only.** A label is a string inside the
+  row's `labels` JSON array rather than a row of its own, so no index or CHECK
+  can see it. Label-against-living-name is therefore enforced in code, in
+  `checkNameAvailable`, and only there. Expressing it as a constraint means
+  materialising the namespace as its own table — one row per name and per label,
+  with a partial unique index over living name rows.
+- **It is an error to set an invalid label**, rejected at write and loudly. A
+  label that cannot be addressed must not become a filter that quietly matches
+  nothing. `checkNameAvailable` is that gate — unavailable-to-you has one gate
+  and one error shape, whether the reason is an unaddressable string, a reserved
+  routing label (`here`, `away`, `awake`, `hibernating`, `dead`, `human`), or a
+  name a living agent already occupies. Add a reason there rather than a path
+  beside it. The response is identical programmatically; the **message names
+  which of the three it is**, because the next action differs — hyphenate the
+  string, choose a non-reserved word, or message the agent holding the name.
+- **Addressability is the filter grammar's rule**, not a matter of taste: a
+  token is a maximal run of characters that are not whitespace or `& | ! ( )`.
+  A string containing one of those still stores, then returns zero matches with
+  no error from `roster`, `chat(to:)`, `thread`, and `search`, while a panel
+  filter keeps matching because it hands the leaf straight to the evaluator. Do
+  not impose a stricter charset because it looks tidier.
+- **Known gap, deliberate:** NBSP (U+00A0) and U+2028 are unaddressable — the
+  tokenizer splits on JS `/\s/`, which matches them — but a SQL `GLOB` class
+  covers only ASCII whitespace. Enumerating unicode whitespace in a constraint
+  is ugly enough to be mis-edited later, and an ugly constraint that gets broken
+  is worse than a plain one with a written-down gap. This is the gap.
+
+Label membership is **lexical**: a filter over history asks who held the label
+at each event's timestamp, joining `label_history` spans, while live delivery
+recomputes membership per event. That asymmetry is deliberate and it is the more
+expensive thing to build. Making history read current membership would be
+dynamic scope, and the same query would return different history depending on
+when it ran. `delegate`'s `mint.labels` exists so a label can be set before the
+agent's first tool call, which is what puts its whole backlog inside the span.
+
+### We do not do auth between agents
+
+This is not an app that prevents agents from doing things to other agents. If an
+agent wants to send an HTTP request impersonating another agent, that is fine.
+Skip's words, 7/31:
+
+> This is not an app that prevents agents from doing things to other fucking
+> agents. That's just it. If an agent wants to fucking send an HTTP request that
+> impersonates another — I don't give a fuck.
+
+> We do not do auth. That's just it. Maybe we will eventually, but we're not
+> gonna do some fucking ill thought out bullshit that someone comes up with.
+
+So: **no gate on any agent-facing action.** Not on reads, not on writes, not on
+`delegate`, `chat`, `report`, `subscribe`, or configuration. Not leniently — not
+at all.
+
+An earlier version of this section described a "fence, not a wall" and a marker
+pattern where an agent typed `cross-lane-ok:` to get past a lane check. That
+check inferred each agent's "lane" from its working directory and guessed from a
+regex whether its sentence counted as management, then refused the call. It was
+authentication with a password, invented rather than asked for, and it is
+deleted — `crossLaneBlock`, `inferAgentLane`, `lanesMayCoordinate`,
+`looksLikeManagementMessage`, and all six MCP call sites. Do not reintroduce it
+under another name, and do not treat "a small friction" as a permitted amount of
+auth.
+
+Security lives at the network layer — bearer tokens and the tailnet, in
+`server/lib/auth.mjs`. That is what protects Skip's data from the outside world.
+So does the filesystem permission-profile system in
+[Permissions implementation contract](docs/permissions-implementation-contract.md),
+which bounds what a process may touch on the machine. Neither is auth between
+agents, and neither is in scope here.
+
+The one check that stays is `approval_id`: to close a task marked as needing
+Skip's approval, an agent passes the ID of the message where he approved it, and
+the event's sender is confirmed human. That is not an agent being stopped from
+acting on another agent — it is a claim about what Skip said, checked against
+what Skip said.
+
+#### Limits that are not authorization
+
+Some checks look like authorization and are not. They stay, and removing them in
+the name of this section is a regression:
+
+- Event-loop protection — the 100-task cap on `POST /api/tasks/retire`; 500 was
+  measured at ~350ms of synchronous SQLite blocking the loop.
+- Query-cost caps — `store-agents-by-ids` at 20, the `my-task` limits, the
+  `subscribe-filter` window.
+- Expensive-query avoidance — the label short-circuit in
+  `server/lib/fleet-store.mjs`, measured at ~230ms per event over ~1300 agents.
+- Fail-closed query semantics — an unmatched name in `fleet-search` yields an
+  impossible id, so a typo returns nothing rather than the whole corpus.
+- Path containment, cross-environment daemon isolation, and the daemon's
+  `validateTmuxOwner` pane-ownership check, which enforces because the daemon
+  owns its ledger rather than trusting a message field.
+
+The test: authorization asks *who is calling*. These ask *how expensive is this*,
+*which file is it*, or *which machine owns it*.
+
 ## Repository workflow
 
 - Temporary plans and reports belong under `scratch/`, not in the repository
@@ -127,6 +297,11 @@ The product and authority model is documented in
   linking, Markdown, agents, permissions, and local configuration.
 - [Current architecture](docs/current-main-architecture.md) describes the
   running system and authority boundaries.
+- [Identity and labeling](docs/identity-and-labeling.md) describes the one
+  namespace of names and labels, which history tables are folds over events and
+  which are the record, and where the namespace rule is enforced. Read it before
+  changing anything about names, labels, runtime status, or the three history
+  tables.
 - [Hosting tlda](docs/hosting.md) covers serving and network boundaries.
 - [Fly deployment](docs/live-deploy.md) is the live release runbook.
 - [Permissions implementation contract](docs/permissions-implementation-contract.md)
