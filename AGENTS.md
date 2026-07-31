@@ -219,75 +219,47 @@ dynamic scope, and the same query would return different history depending on
 when it ran. `delegate`'s `mint.labels` exists so a label can be set before the
 agent's first tool call, which is what puts its whole backlog inside the span.
 
-### The authorization gate is a fence, not a wall
+### We do not do auth between agents
 
-The authorization gate exists so an agent does not casually change something it
-has no business changing. It is a small friction. Authority over the target, or
-contact with it, is enough to pass. It is not a security boundary and must not
-be built into one.
+This is not an app that prevents agents from doing things to other agents. If an
+agent wants to send an HTTP request impersonating another agent, that is fine.
+Skip's words, 7/31:
 
-The rules, in order of how often they are broken:
+> This is not an app that prevents agents from doing things to other fucking
+> agents. That's just it. If an agent wants to fucking send an HTTP request that
+> impersonates another — I don't give a fuck.
 
-- **Do not gate reads.** Not leniently — not at all. Any agent may read any
-  agent's subscriptions, tasks, inbox, or panes.
-- **Do not add a gate to make something safer.** Tightening one is a product
-  change, not a cleanup, and it needs to be asked for.
-- **Do not duplicate a gate across layers.** The fence belongs in the MCP layer,
-  because that is where agents act. A copy in an HTTP route or WS handler is not
-  defence in depth; defence in depth is a security posture and this is not
-  security. Delete the copy.
-- **Do not make a gate enforceable.** Gates resolve the caller from a
-  client-supplied field such as `msg.caller`, while the socket carries a real
-  identity at `ws._tldaAgentId` that the gate never reads. Any agent passes by
-  naming the delegator. This is a fact about what these gates are, not a bug to
-  fix. Wiring them to the socket identity would convert a coordination guard
-  into the wall this section forbids.
+> We do not do auth. That's just it. Maybe we will eventually, but we're not
+> gonna do some fucking ill thought out bullshit that someone comes up with.
+
+So: **no gate on any agent-facing action.** Not on reads, not on writes, not on
+`delegate`, `chat`, `report`, `subscribe`, or configuration. Not leniently — not
+at all.
+
+An earlier version of this section described a "fence, not a wall" and a marker
+pattern where an agent typed `cross-lane-ok:` to get past a lane check. That
+check inferred each agent's "lane" from its working directory and guessed from a
+regex whether its sentence counted as management, then refused the call. It was
+authentication with a password, invented rather than asked for, and it is
+deleted — `crossLaneBlock`, `inferAgentLane`, `lanesMayCoordinate`,
+`looksLikeManagementMessage`, and all six MCP call sites. Do not reintroduce it
+under another name, and do not treat "a small friction" as a permitted amount of
+auth.
 
 Security lives at the network layer — bearer tokens and the tailnet, in
-`server/lib/auth.mjs`. That is what protects Skip's data from the outside world,
-and it is a different mechanism with different rules. So is the filesystem
-permission-profile system in
-[Permissions implementation contract](docs/permissions-implementation-contract.md).
-Neither is in scope when this section says "gate".
+`server/lib/auth.mjs`. That is what protects Skip's data from the outside world.
+So does the filesystem permission-profile system in
+[Permissions implementation contract](docs/permissions-implementation-contract.md),
+which bounds what a process may touch on the machine. Neither is auth between
+agents, and neither is in scope here.
 
-This is original intent that drifted, not a new policy. The code already says
-so, at `server/lib/task-lifecycle.mjs`:
+The one check that stays is `approval_id`: to close a task marked as needing
+Skip's approval, an agent passes the ID of the message where he approved it, and
+the event's sender is confirmed human. That is not an agent being stopped from
+acting on another agent — it is a claim about what Skip said, checked against
+what Skip said.
 
-> Coordination guard, not a security boundary. Active temporary delegation
-> markers intentionally grant manager cleanup authority.
-
-and at `mcp-server/fleet-tools.mjs`, in `requireManager()`:
-
-> `return null; // No permission gating — any agent can do anything`
-
-**The shape of the system, in one example.** An agent may `kill-session`,
-`send-key`, `mark-dead`, `rename`, and `retract` another agent with no gate at
-all — while the gate that prompted this section stopped it from *listing* that
-agent's subscriptions. If you are about to add a gate, check which end of that
-sentence you are working on.
-
-#### The marker pattern
-
-An agent that does not start with authority over something obtains it by citing
-the authorization. This is the friction, and it is why the gate is not a lock —
-the way through is documented and reachable by any agent.
-
-- **Declare it.** An agent cannot hand work to, or give instructions to, an
-  agent working on something unrelated — unless that agent messaged it in the
-  last day, which counts as being in contact. To go anyway, it says so in the
-  message: it writes `cross-lane-ok:` and states who authorized it. Nothing
-  verifies that claim, and nothing is meant to. Having to stop and name the
-  authorization is the entire mechanism. In code this is `crossLaneBlock` in
-  `shared/task-role-routing.mjs`, and the refusal text teaches the marker at
-  the moment it refuses.
-- **Cite it.** To close a task that was marked as needing Skip's approval, an
-  agent passes the ID of the message where he approved it. This one is checked:
-  the event is looked up and its sender confirmed human. In code, `approval_id`.
-
-Follow this pattern when a new action needs a fence. Do not invent a second
-mechanism beside it, and do not replace a marker with a permission check.
-
-#### Limits that are not gates
+#### Limits that are not authorization
 
 Some checks look like authorization and are not. They stay, and removing them in
 the name of this section is a regression:
@@ -304,8 +276,8 @@ the name of this section is a regression:
   `validateTmuxOwner` pane-ownership check, which enforces because the daemon
   owns its ledger rather than trusting a message field.
 
-The test: a gate asks *who is calling*. These ask *how expensive is this*, *which
-file is it*, or *which machine owns it*.
+The test: authorization asks *who is calling*. These ask *how expensive is this*,
+*which file is it*, or *which machine owns it*.
 
 ## Repository workflow
 
