@@ -109,6 +109,94 @@ The product and authority model is documented in
   transaction boundary. Preserve the separate Git fetch/push semantics of linked
   remotes.
 
+### The authorization gate is a fence, not a wall
+
+The authorization gate exists so an agent does not casually change something it
+has no business changing. It is a small friction. Authority over the target, or
+contact with it, is enough to pass. It is not a security boundary and must not
+be built into one.
+
+The rules, in order of how often they are broken:
+
+- **Do not gate reads.** Not leniently — not at all. Any agent may read any
+  agent's subscriptions, tasks, inbox, or panes.
+- **Do not add a gate to make something safer.** Tightening one is a product
+  change, not a cleanup, and it needs to be asked for.
+- **Do not duplicate a gate across layers.** The fence belongs in the MCP layer,
+  because that is where agents act. A copy in an HTTP route or WS handler is not
+  defence in depth; defence in depth is a security posture and this is not
+  security. Delete the copy.
+- **Do not make a gate enforceable.** Gates resolve the caller from a
+  client-supplied field such as `msg.caller`, while the socket carries a real
+  identity at `ws._tldaAgentId` that the gate never reads. Any agent passes by
+  naming the delegator. This is a fact about what these gates are, not a bug to
+  fix. Wiring them to the socket identity would convert a coordination guard
+  into the wall this section forbids.
+
+Security lives at the network layer — bearer tokens and the tailnet, in
+`server/lib/auth.mjs`. That is what protects Skip's data from the outside world,
+and it is a different mechanism with different rules. So is the filesystem
+permission-profile system in
+[Permissions implementation contract](docs/permissions-implementation-contract.md).
+Neither is in scope when this section says "gate".
+
+This is original intent that drifted, not a new policy. The code already says
+so, at `server/lib/task-lifecycle.mjs`:
+
+> Coordination guard, not a security boundary. Active temporary delegation
+> markers intentionally grant manager cleanup authority.
+
+and at `mcp-server/fleet-tools.mjs`, in `requireManager()`:
+
+> `return null; // No permission gating — any agent can do anything`
+
+**The shape of the system, in one example.** An agent may `kill-session`,
+`send-key`, `mark-dead`, `rename`, and `retract` another agent with no gate at
+all — while the gate that prompted this section stopped it from *listing* that
+agent's subscriptions. If you are about to add a gate, check which end of that
+sentence you are working on.
+
+#### The marker pattern
+
+An agent that does not start with authority over something obtains it by citing
+the authorization. This is the friction, and it is why the gate is not a lock —
+the way through is documented and reachable by any agent.
+
+- **Declare it.** An agent cannot hand work to, or give instructions to, an
+  agent working on something unrelated — unless that agent messaged it in the
+  last day, which counts as being in contact. To go anyway, it says so in the
+  message: it writes `cross-lane-ok:` and states who authorized it. Nothing
+  verifies that claim, and nothing is meant to. Having to stop and name the
+  authorization is the entire mechanism. In code this is `crossLaneBlock` in
+  `shared/task-role-routing.mjs`, and the refusal text teaches the marker at
+  the moment it refuses.
+- **Cite it.** To close a task that was marked as needing Skip's approval, an
+  agent passes the ID of the message where he approved it. This one is checked:
+  the event is looked up and its sender confirmed human. In code, `approval_id`.
+
+Follow this pattern when a new action needs a fence. Do not invent a second
+mechanism beside it, and do not replace a marker with a permission check.
+
+#### Limits that are not gates
+
+Some checks look like authorization and are not. They stay, and removing them in
+the name of this section is a regression:
+
+- Event-loop protection — the 100-task cap on `POST /api/tasks/retire`; 500 was
+  measured at ~350ms of synchronous SQLite blocking the loop.
+- Query-cost caps — `store-agents-by-ids` at 20, the `my-task` limits, the
+  `subscribe-filter` window.
+- Expensive-query avoidance — the label short-circuit in
+  `server/lib/fleet-store.mjs`, measured at ~230ms per event over ~1300 agents.
+- Fail-closed query semantics — an unmatched name in `fleet-search` yields an
+  impossible id, so a typo returns nothing rather than the whole corpus.
+- Path containment, cross-environment daemon isolation, and the daemon's
+  `validateTmuxOwner` pane-ownership check, which enforces because the daemon
+  owns its ledger rather than trusting a message field.
+
+The test: a gate asks *who is calling*. These ask *how expensive is this*, *which
+file is it*, or *which machine owns it*.
+
 ## Repository workflow
 
 - Temporary plans and reports belong under `scratch/`, not in the repository
