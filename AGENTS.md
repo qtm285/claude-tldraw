@@ -62,6 +62,23 @@ pass it on.
 
 Agents you spawned are yours to brief and yours to answer for.
 
+## Look for what broke it
+
+When something Skip used to have stops working, it is a regression until proven
+otherwise. Do not reason forward from the current code toward "this was never
+built" — agents merge bad code, and agents merge over fixes. Both happen here
+regularly, and the result looks identical to a missing feature.
+
+The cheap moves, in order: `git log -S` the symbol on the failing path; check
+whether a fix exists on an unmerged branch; and when some cases work and others
+do not, find the boundary between them rather than reading the working path
+forward. A split — eleven agents have the field and a hundred and eighty-seven
+do not — locates a commit faster than any amount of tracing.
+
+One night produced three of these: a blessed implementation that was never
+merged, themes that had landed hours before an agent was sent to find them, and
+a field that stopped being written that day. Each was first reported as absent.
+
 ## Never hand Skip a URL carrying someone else's name
 
 `?name=` sets the identity of whoever opens the link, and opening it **persists**
