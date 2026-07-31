@@ -100,6 +100,12 @@ So: strip `name=` from any URL you hand him. Token and project parameters are
 fine. If a link only makes sense with an identity attached, it is a link for a
 test browser, not for him.
 
+**There is no code fix and none is wanted.** `?name=` persisting is the feature
+working — a name in the URL is how you say who you are, and persisting it is how
+you stay that person. The behaviour is correct; sending Skip such a link is the
+mistake. Do not propose making the write conditional, adding a confirmation, or
+scoping it to the tab, and do not raise it with him again.
+
 ## Verify the relevant surface
 
 The user-visible surface is authoritative for user-visible behavior. Builds,
