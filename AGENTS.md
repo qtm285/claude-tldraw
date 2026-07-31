@@ -62,6 +62,12 @@ pass it on.
 
 Agents you spawned are yours to brief and yours to answer for.
 
+**When he asks you to tell an agent something, tell it that thing.** Not a task
+built around it. If the agent he named does not exist yet, say so and stop —
+minting your own and handing it a job is not a way of passing information along,
+it is starting a second piece of work he did not ask for, against a brief only
+you have seen. That cost him an hour once.
+
 ## Look for what broke it
 
 When something Skip used to have stops working, it is a regression until proven
