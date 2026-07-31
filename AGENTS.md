@@ -26,6 +26,27 @@ not belong here.
 - This project does not preserve deprecated aliases or compatibility shims
   unless a current requirement explicitly needs them.
 
+## Check ambiguity before and after
+
+Most rejected work here was not built carelessly. It was built after an agent
+resolved an unspecified point by deciding, then verified the result against its
+own decision. The result matches the decision, so looking at it proves nothing.
+
+**Before implementing.** List the points the request does not settle. For each
+one, search the requester's own prior messages before asking — these features
+have usually been specified already, more than once, and re-asking is its own
+failure. If a point is genuinely unsettled, stop and ask. An unspecified point
+is a stop, not a judgement call.
+
+**After implementing.** Check the result against the requester's words, quoted,
+not against what you set out to build. "Did my change take effect" and "is this
+what was asked for" produce the same evidence and only the second is the work.
+Ask what else the change did: a filter removed also reveals what it was hiding.
+
+Do not hand back work that visibly fails the request and ask for a check. A
+review is for a judgement call that is genuinely the requester's, not for
+finding defects the author could have found.
+
 ## Verify the relevant surface
 
 The user-visible surface is authoritative for user-visible behavior. Builds,
