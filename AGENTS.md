@@ -152,8 +152,9 @@ and at `mcp-server/fleet-tools.mjs`, in `requireManager()`:
 
 **The shape of the system, in one example.** An agent may `kill-session`,
 `send-key`, `mark-dead`, `rename`, and `retract` another agent with no gate at
-all. Until recently it could not list that agent's subscriptions. If you are
-about to add a gate, you are working on the wrong end of that sentence.
+all — while the gate that prompted this section stopped it from *listing* that
+agent's subscriptions. If you are about to add a gate, check which end of that
+sentence you are working on.
 
 #### The marker pattern
 
