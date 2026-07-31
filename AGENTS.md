@@ -109,6 +109,57 @@ The product and authority model is documented in
   transaction boundary. Preserve the separate Git fetch/push semantics of linked
   remotes.
 
+### Names and labels are one namespace
+
+A friendly name is a label with a unique living occupant. That is the only
+difference between them: both are strings an agent answers to, and the
+uniqueness constraint over living agents applies to names alone.
+
+- **Uniqueness is a database constraint** — a partial unique index, which is how
+  "one living agent per name" is expressible at all:
+
+  ```sql
+  CREATE UNIQUE INDEX idx_agents_live_name
+  ON agents(friendly_name) WHERE dead = 0 AND friendly_name IS NOT NULL
+  ```
+
+  A second living holder of a name is unrepresentable. Do not add a code check
+  beside it; a parallel check drifts and the index is the one that wins.
+- **The index covers names against names only.** A label is a string inside the
+  row's `labels` JSON array rather than a row of its own, so no index or CHECK
+  can see it. Label-against-living-name is therefore enforced in code, in
+  `checkNameAvailable`, and only there. Expressing it as a constraint means
+  materialising the namespace as its own table — one row per name and per label,
+  with a partial unique index over living name rows.
+- **It is an error to set an invalid label**, rejected at write and loudly. A
+  label that cannot be addressed must not become a filter that quietly matches
+  nothing. `checkNameAvailable` is that gate — unavailable-to-you has one gate
+  and one error shape, whether the reason is an unaddressable string, a reserved
+  routing label (`here`, `away`, `awake`, `hibernating`, `dead`, `human`), or a
+  name a living agent already occupies. Add a reason there rather than a path
+  beside it. The response is identical programmatically; the **message names
+  which of the three it is**, because the next action differs — hyphenate the
+  string, choose a non-reserved word, or message the agent holding the name.
+- **Addressability is the filter grammar's rule**, not a matter of taste: a
+  token is a maximal run of characters that are not whitespace or `& | ! ( )`.
+  A string containing one of those still stores, then returns zero matches with
+  no error from `roster`, `chat(to:)`, `thread`, and `search`, while a panel
+  filter keeps matching because it hands the leaf straight to the evaluator. Do
+  not impose a stricter charset because it looks tidier.
+- **Known gap, deliberate:** NBSP (U+00A0) and U+2028 are unaddressable — the
+  tokenizer splits on JS `/\s/`, which matches them — but a SQL `GLOB` class
+  covers only ASCII whitespace. Enumerating unicode whitespace in a constraint
+  is ugly enough to be mis-edited later, and an ugly constraint that gets broken
+  is worse than a plain one with a written-down gap. This is the gap.
+
+Label membership is **lexical**: a filter over history asks who held the label
+at each event's timestamp, joining `label_history` spans, while live delivery
+recomputes membership per event. That asymmetry is deliberate and it is the more
+expensive thing to build. Making history read current membership would be
+dynamic scope, and the same query would return different history depending on
+when it ran. `delegate`'s `mint.labels` exists so a label can be set before the
+agent's first tool call, which is what puts its whole backlog inside the span.
+
 ### The authorization gate is a fence, not a wall
 
 The authorization gate exists so an agent does not casually change something it
