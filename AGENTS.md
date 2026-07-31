@@ -62,6 +62,21 @@ pass it on.
 
 Agents you spawned are yours to brief and yours to answer for.
 
+## Never hand Skip a URL carrying someone else's name
+
+`?name=` sets the identity of whoever opens the link, and opening it **persists**
+that name to their browser profile. It is a testing affordance: on a test server,
+on a different machine, with its own identity space, `&name=tester` is correct and
+stays correct.
+
+A link sent to Skip is none of those things. Give him a URL with a name on it and
+you have changed who he is in his own app, silently, until something else changes
+it back. He does not click a name that isn't his; do not put one in front of him.
+
+So: strip `name=` from any URL you hand him. Token and project parameters are
+fine. If a link only makes sense with an identity attached, it is a link for a
+test browser, not for him.
+
 ## Verify the relevant surface
 
 The user-visible surface is authoritative for user-visible behavior. Builds,
