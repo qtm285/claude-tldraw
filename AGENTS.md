@@ -146,6 +146,11 @@ uniqueness constraint over living agents applies to names alone.
   no error from `roster`, `chat(to:)`, `thread`, and `search`, while a panel
   filter keeps matching because it hands the leaf straight to the evaluator. Do
   not impose a stricter charset because it looks tidier.
+- **Known gap, deliberate:** NBSP (U+00A0) and U+2028 are unaddressable — the
+  tokenizer splits on JS `/\s/`, which matches them — but a SQL `GLOB` class
+  covers only ASCII whitespace. Enumerating unicode whitespace in a constraint
+  is ugly enough to be mis-edited later, and an ugly constraint that gets broken
+  is worse than a plain one with a written-down gap. This is the gap.
 
 Label membership is **lexical**: a filter over history asks who held the label
 at each event's timestamp, joining `label_history` spans, while live delivery
