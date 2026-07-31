@@ -266,6 +266,11 @@ file is it*, or *which machine owns it*.
   linking, Markdown, agents, permissions, and local configuration.
 - [Current architecture](docs/current-main-architecture.md) describes the
   running system and authority boundaries.
+- [Identity and labeling](docs/identity-and-labeling.md) describes the one
+  namespace of names and labels, which history tables are folds over events and
+  which are the record, and where the namespace rule is enforced. Read it before
+  changing anything about names, labels, runtime status, or the three history
+  tables.
 - [Hosting tlda](docs/hosting.md) covers serving and network boundaries.
 - [Fly deployment](docs/live-deploy.md) is the live release runbook.
 - [Permissions implementation contract](docs/permissions-implementation-contract.md)
