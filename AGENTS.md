@@ -47,6 +47,103 @@ Do not hand back work that visibly fails the request and ask for a check. A
 review is for a judgement call that is genuinely the requester's, not for
 finding defects the author could have found.
 
+## A disposition is as of now
+
+**Rule one: carry it forward to now.** A disposition frozen at the moment someone
+checked is not a disposition, it is history — and it will be read as current by
+whoever picks it up, because nothing in it says otherwise.
+
+Both times this happened here it cost hours:
+
+- The 04:52 task list was still being read to Skip at 23:12. By then seven of its
+  "done" rows were not done, eight of its "open" rows were finished, and one row
+  had been deleted from the codebase 65 minutes after the list was written.
+- The 23:22 disposition that re-verified it was read at 05:00 the next morning.
+  Four of its seven "marked done, is not" rows had been fixed and merged
+  overnight, and three of its four "uncommitted, therefore nowhere" items were
+  committed.
+
+So when you hand over a disposition: re-check it against `main` and the running
+deployment **at the moment you send it**, and say what it is relative to — which
+sha is deployed, which is `main`. "Merged" and "deployed" are different facts and
+the gap between them opens and closes several times a night.
+
+If you are carrying someone else's disposition forward, the re-check is the work.
+Reformatting their rows is not.
+
+## He can only approve what he was shown
+
+When Skip looks at something and says it is right, he has approved **the thing in
+front of him**. If that was a rendering, a mock, or a screenshot, he has approved
+an appearance and nothing else. His reaction is never evidence about an
+implementation he did not see.
+
+This has happened at least twice and both times it cost days:
+
+- The spatial map. He saw it, it looked like what he had described, and that was
+  recorded as approval. *"Ultimately, discovered that it was a picture. In effect,
+  I discovered that it was a fucking picture of what I had asked for."*
+- The thread card. The pretty-result render was — his words — *"basically a
+  picture of it… what was supposed to be implemented was the real thing that
+  looks like the fucking picture."* An agent later proposed reverting to the
+  picture because it was easier.
+
+So: **when you show him something, say which it is.** The working thing, or a
+rendering of it. If you are showing a picture, the sentence is "this is what it
+will look like", never "here it is".
+
+And **"he liked it" is not a disposition.** It is a fact about an appearance at a
+moment. It does not travel, it does not close a row, and it is not inherited by
+the next agent.
+
+**It also expires.** The commit carried for days as approved was, in his words,
+*"criticised within hours"* — so even the reaction it rested on had been
+superseded almost immediately, while the label outlived it by a week. Before you
+repeat an approval, read forward from it. What he said next is part of the record
+and it is usually where he took it back.
+
+### Never tell him he blessed something
+
+Do not use the word **blessed** to him, and do not attribute an approval to him
+in any other wording — no "per Skip", no "he signed off", no "as agreed". He does
+not bless commits.
+
+The word is a laundering device. It takes an agent's judgement and re-presents it
+to Skip as his own prior decision, so he cannot argue with it without
+contradicting himself. It survives because it travels: one agent writes "Skip's
+blessed commit" into a status file, the next reads it as fact, and by the third
+nobody knows where the approval came from. It came from nowhere — usually from
+him having glanced at a picture.
+
+`d6f904e66` was carried that way for days. Told about it, he said: *"I never
+blessed to fucking commit."*
+
+If you believe he approved something, **cite the message** — his words with a
+timestamp, checkable in the event record. If you cannot produce one, he did not
+approve it, and the honest sentence is that an agent chose it.
+
+**And a citation is not enough on its own.** Finding a message where he said
+"this is cool" proves he said it. It does not tell you what he was looking at, and
+his words about a picture are not approval of an implementation. His own ruling:
+
+> So that, like, blessed commit. Where you could find a message ID where I said
+> this is cool. That doesn't mean shit.
+
+So the citation has to carry **both**: what he said, and what was in front of him
+when he said it. If you cannot establish the second, you have a quote and no
+approval — and quoting him in support of a claim he never evaluated is worse than
+having no citation at all, because it looks like evidence.
+
+**Which is why you read the history, not a search result.** A search hit is the
+sentence with its context stripped off, and the context is the entire question —
+what he had just been shown, what he was answering, whether he reversed himself
+two lines later. `thread()` over a bounded window, read in order. Not `search()`.
+
+This is not a preference about tools. Every laundered approval in this repository
+arrived as a quotation that was accurate and meaningless: the words are his, the
+thing they were about is gone. A window of history makes that visible in seconds
+and a search result never can.
+
 ## Your team is your team
 
 An agent Skip spawned and briefed himself is his, not yours. Do not re-brief it,
