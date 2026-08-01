@@ -144,6 +144,55 @@ The product and authority model is documented in
 - Keep routine infrastructure delivery out of ordinary conversation. Surface
   failures that change what a participant can expect.
 
+## Notation is borrowed, and so is its meaning
+
+tlda's notation quotes programming languages Skip already knows. That is
+deliberate, and it is the thing to reach for when a design point is unsettled:
+**when a notation is borrowed, its semantics are borrowed too.** If you can name
+the source language, you already know what the answer should be. His framing:
+
+> These decisions come from somewhere. They're not just willy-nilly, like each
+> individual thing is its own decision. There's some abstraction, and that can
+> help us think about the right solution — and help you propose the right
+> solution to me instead of me having to correct everything.
+
+| notation | from | and therefore |
+|---|---|---|
+| `*chief-successor` | **C** — dereference | A friendly name is a *pointer*; the fleet ID is the address. You write the pointer. You never look at the address. |
+| `eiv-paper@0b77278` | **npm** — `pkg@1.2.3` | Version is a coordinate on a thing you already named, not a separate object. |
+| `/balancing-act/appendix` | **the web** — URL paths | Root is the set of projects. A leading `/` is absolute. **No `..`** — these are references, not file paths. |
+| `/balancing-act` alone | **the web** — index at the root | A project's main document *is* the project name. One string, one namespace check. |
+| `{#sec3 .theorem}` | **pandoc / Quarto** | `#id`, `.class`, `tag`, `[attr=value]`. Braced when it contains whitespace or `& \| ! ( )`. |
+| the three-scope chain | **lexical scope** | Document → project main → fleet. A fixed order over named scopes, stateable in a sentence. Not inference. |
+| `batch(15s)` | **CSS durations** | The unit is part of the value. A bare `15` is an error, not a default. |
+| `here`, `away`, `dead` | **reserved words** | You cannot name a document one. Reserving a new one *retroactively* errors the documents that hold it, and they get renamed. |
+| `awake & !goose` | **boolean algebra** | A token is a maximal run of characters that are not whitespace or `& \| ! ( )`. That is the grammar's rule, not a charset preference. |
+
+**Two places the borrowing does real work.**
+
+*Shadowing is an error* — because that is the decision a language makes. Skip
+worked through R (warn) and TeX (error) and chose error: the qualified form is
+always available, so making shadowing impossible costs more than making it
+explicit.
+
+*Membership is lexical, not dynamic* — the same word it is in Lisp. A filter
+over history asks who held the label at each event's timestamp, joining
+`label_history` spans. Making history read *current* membership would be dynamic
+scope, and the same query would return different history depending on when it
+ran.
+
+`*name` inherits that immediately and needs nothing new: **resolution is a fold
+over naming and labeling events**, the way labels already are. The event stores
+an ID and a timestamp; the name at that time is a join, not a stored fact. Do not
+add a column for it.
+
+**When you hit an unspecified point, name the source language first.** "Should a
+reference walk up with `..`?" is answered by *it's a URL, and the web has no
+parent-relative project*. "What happens when two agents hold a name?" is answered
+by *names are pointers and a pointer has one target* — which is why it is a
+database index rather than a code check. **When you cannot name a source, that is
+the signal to ask rather than decide.**
+
 ## Implementation invariants
 
 ### Use tldraw-native state and interaction
