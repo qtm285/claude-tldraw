@@ -334,6 +334,17 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
   root or durable documentation.
 - Feature work belongs in its assigned worktree. Do not move or stash another
   contributor's changes to make a checkout clean.
+- **Every working copy lives in `~/worktrees/`.** One place, for worktrees and
+  clones alike. Not `~/work`, which holds Skip's own project directories and had
+  accumulated 139 checkouts mixed in with them; not `/private/tmp`, which macOS
+  clears and which took an agent's uncommitted work on 2026-08-01; not inside the
+  repository, because `tsc -b` and the greps this project runs constantly would
+  walk it. A `post-checkout` hook fails loudly on a worktree created anywhere
+  else — install it with `node bin/install-git-hooks.mjs`.
+- **Commit when the typecheck passes, not when the verification is finished.** A
+  checkout is disposable and a branch is not: work that is only in a working
+  directory is one `rm` away from gone, and nothing else in this workflow
+  protects it. Amend afterwards if verification changes the result.
 - Do not deploy a branch or worktree. Live deployments use committed `main`
   through the documented wrapper.
 - Use `tlda server start`, `tlda server stop`, and `tlda server status` for a
