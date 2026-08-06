@@ -362,8 +362,7 @@ at each event's timestamp, joining `label_history` spans, while live delivery
 recomputes membership per event. That asymmetry is deliberate and it is the more
 expensive thing to build. Making history read current membership would be
 dynamic scope, and the same query would return different history depending on
-when it ran. `delegate`'s `mint.labels` exists so a label can be set before the
-agent's first tool call, which is what puts its whole backlog inside the span.
+when it ran.
 
 ### We do not do auth between agents
 
