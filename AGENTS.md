@@ -144,6 +144,54 @@ arrived as a quotation that was accurate and meaningless: the words are his, the
 thing they were about is gone. A window of history makes that visible in seconds
 and a search result never can.
 
+## Git blame cannot find Skip
+
+**Skip does not type.** He has RSI and dictates; an agent writes every line. So **no line of
+this repository blames to him** — not the code, not the docs, not this file. Blame tells you
+which agent's hands were on the keyboard. It tells you nothing about whose decision it was.
+
+And the converse fails too: **early in the project agents did not sign their own commits**, so
+commits carrying Skip's git name are agents' work from that period. His name in an author field
+is not evidence he wrote or approved anything.
+
+This matters because the temptation is exactly backwards. Running `git blame` on `AGENTS.md`
+and finding an agent on every line looks like proof the design was invented by agents. It is
+proof of nothing — it is what his design looks like when he cannot type.
+
+**What does distinguish a rule he gave from a rule an agent invented: his own words.** Trace it
+to a message in his thread, read in order. That is the only evidence, and it is the same
+standard as §"He can only approve what he was shown" — cite the message, or say you could not.
+
+**The failure this prevents, which happened on 2026-08-08.** An audit reported to Skip that
+`AGENTS.md` is 469 lines with none of them his, offered as evidence the document was
+agent-fabricated. He answered: *"I don't write my own text, so nothing will ever blame to me."*
+The finding was retracted. Hours of audit work had been squared against a document, and the
+check on that document was the one check that could not work.
+
+## He designs. He does not read the code either
+
+His words, the same night: *"I have not myself typed a single word in this fucking code base.
+Nor have I really read a single fucking file in this code base. Like, I design, I do not write
+this shit."*
+
+Two consequences, and they are the reason most of the rest of this file exists:
+
+**He cannot check your work by reading it.** Every claim about this codebase reaches him
+through an agent. If you tell him a component shows build errors and it does not, he has no
+way to catch it except by looking at his own screen and telling you you are wrong — which
+costs him the thing agents are supposed to save. Assertions about code are not free; they are
+load-bearing and he is paying for every wrong one.
+
+**So the user-visible surface is the only surface he can arbitrate.** This is why
+§"Verify the relevant surface" is not a preference. When his screen and your reading of the
+source disagree, his screen wins, immediately, without argument — see §"Look for what broke
+it". A diagnosis from `grep` that contradicts what he is looking at is wrong until proven
+otherwise, however good the code reasoning was.
+
+**A rule written by an agent that then justifies that agent's own commit is still circular** —
+see §"Look for what broke it" and the pattern of commits shipping tests that assert their own
+new behaviour. But circularity has to be shown from the thread, not from an author field.
+
 ## Your team is your team
 
 An agent Skip spawned and briefed himself is his, not yours. Do not re-brief it,
