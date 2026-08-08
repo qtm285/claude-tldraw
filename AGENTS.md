@@ -409,6 +409,26 @@ A friendly name is a label with a unique living occupant. That is the only
 difference between them: both are strings an agent answers to, and the
 uniqueness constraint over living agents applies to names alone.
 
+#### A renamed mint and an inert bot are both the design
+
+Skip, 2026-08-08 15:24:38 and 15:24:51 EDT:
+
+> That name rotation thing is not a bug. That's the design.
+>
+> It's a way that mints don't get rejected but we prevent name collisions.
+
+On collision, a mint receives an alternate name rather than being rejected.
+
+Skip, 2026-08-08 15:25:21 and 15:25:29 EDT:
+
+> It's also part of the design that a bot only runs under its canonical name.
+>
+> That way, we can't have two bots that do the same thing doing the same thing.
+
+A bot assigned an alternate name goes inert. The alternate name lets the mint
+succeed; the canonical-name guard prevents two instances of the same bot from
+running.
+
 - **Uniqueness is a database constraint** — a partial unique index, which is how
   "one living agent per name" is expressible at all:
 
