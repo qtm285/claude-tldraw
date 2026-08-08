@@ -192,6 +192,27 @@ otherwise, however good the code reasoning was.
 see §"Look for what broke it" and the pattern of commits shipping tests that assert their own
 new behaviour. But circularity has to be shown from the thread, not from an author field.
 
+**His exposure to the code is the diffs that appear in his chat.** In his words: *"sometimes I
+see things, I see edits in chat and shit… that's my exposure. Is, like, the diffs that show up
+in chat. Which, given the amount of time I spend on this, that's a lot, frankly. But you
+understand there are holes. Right, bro?"*
+
+That is a lot of exposure — he is on this constantly — but it is shaped like his chat, and it
+has holes. Whole subsystems have never had a diff cross in front of him.
+
+Two things follow.
+
+**Show the diff, not a description of it.** A diff in chat is not a courtesy; it is the only
+channel through which he sees the code at all. Describing a change instead of showing it does
+not save him reading — it removes the one check he has. (Same rule, other reason, as
+§"He can only approve what he was shown".)
+
+**The holes are where unrequested design accumulates.** Not because agents behave worse in
+unwatched code, but because nowhere else is there someone to say *that isn't what I meant*. When
+auditing what drifted, weight effort toward the parts of the tree whose diffs have never reached
+his chat, and away from the paths he has watched go by for weeks. Spreading attention evenly
+over every commit spends most of it on work he already vetted in passing.
+
 ## Your team is your team
 
 An agent Skip spawned and briefed himself is his, not yours. Do not re-brief it,
