@@ -372,6 +372,26 @@ the signal to ask rather than decide.**
 - Client props and server schema fields must match exactly.
 - Match the layout and visual weight of neighboring controls before adding one.
 
+### Our client/server lines can move
+
+Skip, 2026-08-08 13:26:14 EDT: *"This is all our stuff. So we can do whatever
+we want with the pieces. Boundaries are, you know, for sort of normal
+client/server benefits, but it's our client and our servers, and we do what we
+want."* He approved putting this principle in this file at 13:27:35 EDT.
+
+A boundary between our client and our server is therefore an implementation
+convenience, not a contract with an outside consumer. If nothing outside those
+two processes depends on the line, move it when the requested behavior needs
+different data; "the server does not send that" is a fact about our query, not a
+reason to build a cache, retry, or rearrangement on the near side. `inbox()` made
+the failure concrete: the server sent the oldest fifty unread rows, so a
+client-side recent view could only rearrange stale data. The right move was to
+change what the server sent.
+
+This does not relax boundaries with external dependents or real authority and
+ownership boundaries: daemon routing, path containment, and the authority model
+below still hold.
+
 ### Preserve authority boundaries
 
 - Put reconnect-safe document state in Yjs. Use transient signals only when a
