@@ -337,8 +337,8 @@ A rig that reproduces an intermittent fault once has told you it can happen,
 which you already knew; a rig that fails to reproduce it has told you nothing at
 all. The instrument for this class is the record of what actually happened on his
 machine. Tonight's stick-to-bottom diagnosis is the shape to copy: **twenty
-follow-off records from his own live session, every one at gap ≈ 0** — a cause
-named from telemetry, with no browser anywhere in it.
+follow-off records from his own live session, every one naming the same input
+path** — a cause named from telemetry, with no browser anywhere in it.
 
 **Prefer evidence that already exists.** His own session on the deployed sha is
 stronger than any repro an agent can build: when `main` and the deployment are
