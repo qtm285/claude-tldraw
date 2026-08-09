@@ -347,9 +347,33 @@ renderer output, an existing mechanism already shipping elsewhere in the same
 file, and a structural argument from the DOM shape are all real evidence and
 none of them costs him a machine.
 
-**When it genuinely needs eyes, hand him one bounded test** — one exact URL, one
-action, one expected result — rather than building a rig to look at it yourself.
-That is thirty seconds of his time against an hour of the fleet's.
+**Read his tab before you ask him anything about it.** Existing-tab CDP inspection
+is available, authorized, and read-only — there is an SSH key to the Air and
+remote debugging is enabled. So the state of his session is evidence you can
+collect yourself: the DOM, the console, a trace. Skip, 2026-08-09 04:52 EDT,
+after an agent handed him a console query to run:
+
+> "If you guys wanna read the console, you can. **Don't make me fucking do it for
+> you.**"
+
+> "Dude, no. Like, **you can use fucking remote debugging.**"
+
+**This is not the browser rig this section warns about.** It is reading a page
+that already exists, showing what he is already looking at, with no preview
+server, no build, and no agent pretending to be a user. It is the cheapest
+evidence available and it is almost always better than asking.
+
+**Read-only means read-only** — never navigate, reload, click, resize, open or
+close a tab, or move the camera in his browser. Interactive verification uses the
+pooled browser under `tlda-dev pw`. See `app-testing` §"Skip's Chrome is
+observe-only".
+
+**Only when that is genuinely impossible, hand him one bounded test** — one exact
+URL, one action, one expected result — rather than building a rig to look at it
+yourself. **Asking him to run a query, read a log, or report a number is not a
+bounded test; it is making him your instrument.** A bounded test is a thing only a
+human can do: judge whether something looks right, or perform a gesture on a
+device the fleet cannot drive.
 
 **The deeper reason, and it is not about cost.** Skip, 03:20 EDT:
 
