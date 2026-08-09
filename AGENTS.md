@@ -348,10 +348,22 @@ file, and a structural argument from the DOM shape are all real evidence and
 none of them costs him a machine.
 
 **Read his tab before you ask him anything about it.** Existing-tab CDP inspection
-is available, authorized, and read-only — there is an SSH key to the Air and
-remote debugging is enabled. So the state of his session is evidence you can
-collect yourself: the DOM, the console, a trace. Skip, 2026-08-09 04:52 EDT,
-after an agent handed him a console query to run:
+is available, authorized, and read-only. **You have your own key and his Chrome is
+listening:**
+
+```sh
+ssh air-agent 'hostname'          # Chrome remote debugging on localhost:9222
+```
+
+`air-agent` is in `~/.ssh/config` and uses `~/.ssh/tlda-mini-agent`, **the agent
+key.** Do not reach for `~/.ssh/id_ecdsa` — that one is Skip's, permission
+profiles deny it, and `ssh` reports the denial as `no such identity`, which reads
+like a missing file and is not. Two agents misdiagnosed exactly that on
+2026-08-09 before finding `air-agent`.
+
+So the state of his session is evidence you collect yourself: the DOM, the
+console, a trace, on the real surface with his real history. Skip, 2026-08-09
+04:52 EDT, after an agent handed him a console query to run:
 
 > "If you guys wanna read the console, you can. **Don't make me fucking do it for
 > you.**"
