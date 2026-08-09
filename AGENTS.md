@@ -281,10 +281,92 @@ tests, logs, database rows, and source inspection are diagnostics.
 - Verify a document change on the relevant rendered document.
 - Verify a UI change in the real application environment on a document that is
   not in active use.
-- Use `tlda-dev pw` only when browser interaction is required. Do not serve a
-  substitute sandbox and report it as the application.
+- Use `tlda-dev pw` only when browser interaction is the thing being tested. Do
+  not serve a substitute sandbox and report it as the application.
 - When supported automation cannot exercise the behavior, state the exact
   missing proof rather than manufacturing a proxy.
+
+### A browser is a last resort, not a gate
+
+Skip, 2026-08-09 03:16–03:19 EDT, after thirteen agents each started a preview
+server and a browser to satisfy a merge gate an agent had invented, and took his
+machine to load average 62.7 while he was using it:
+
+> "Browser testing is almost always fucking useless."
+
+> "it's fine to do tests in a fucking browser if that's the fucking thing you
+> need to test. But very, like, **agents are fucking awful at doing it. For one
+> thing, like, they set up environments in which nothing happens and then are
+> fucking like, oh, nothing's happening.**"
+
+So the bar is narrow: **reach for a browser only when browser interaction is
+itself the thing under test** — a gesture, a pointer event, a layout that only
+exists once rendered. Everything else has cheaper and better evidence. In his
+words, four minutes later:
+
+> "most things don't require browser testing. **UI tweaks don't require fucking
+> testing at all.** Fucking infrastructure tweaks have nothing to fucking do with
+> the browser. **The question as to whether something is there can be satisfied
+> by looking at the fucking DOM using fucking jQuery**, etcetera."
+
+Three rules fall straight out of that:
+
+- **A UI tweak ships.** It does not get a test, a screenshot, or a rig. He is
+  looking at the app; he will tell you.
+- **Infrastructure work has no browser in it at all.** A daemon, a CLI, a socket,
+  a schema — none of these are reached through a page.
+- **"Is it there?" is a DOM query, not a browser session.** Querying the rendered
+  DOM answers presence. Standing up a preview, driving a browser, and taking a
+  screenshot to establish the same fact is the expensive way to learn less.
+
+**Never make a browser run a precondition for shipping.** The `app-development`
+skill states this directly: *"Do not manufacture a preview as a prerequisite for
+shipping requested work… he does not become routine QA."* A gate applied across
+a fleet multiplies one build and one browser by the number of agents, which is
+how a verification rule becomes a denial of service.
+
+**An intermittent bug is immune to a browser test, and that is what telemetry is
+for.** Skip, 03:21 EDT:
+
+> "Intermittent bugs are intermittent, so a fucking browser test does nothing for
+> them."
+>
+> "**This is why we have fucking telemetry.**"
+
+A rig that reproduces an intermittent fault once has told you it can happen,
+which you already knew; a rig that fails to reproduce it has told you nothing at
+all. The instrument for this class is the record of what actually happened on his
+machine. Tonight's stick-to-bottom diagnosis is the shape to copy: **twenty
+follow-off records from his own live session, every one at gap ≈ 0** — a cause
+named from telemetry, with no browser anywhere in it.
+
+**Prefer evidence that already exists.** His own session on the deployed sha is
+stronger than any repro an agent can build: when `main` and the deployment are
+the same commit, his telemetry *is* the counterfactual. A measured diff in
+renderer output, an existing mechanism already shipping elsewhere in the same
+file, and a structural argument from the DOM shape are all real evidence and
+none of them costs him a machine.
+
+**When it genuinely needs eyes, hand him one bounded test** — one exact URL, one
+action, one expected result — rather than building a rig to look at it yourself.
+That is thirty seconds of his time against an hour of the fleet's.
+
+**The deeper reason, and it is not about cost.** Skip, 03:20 EDT:
+
+> "agents are bad enough at imitating users that there's very little to be gained
+> from doing so."
+
+A browser run is an agent pretending to be him. The pretence is the weak link:
+what an agent clicks, in what order, with what expectation, is a guess about his
+behaviour, and a passing guess proves nothing about the person. **He is the user
+and he is right there.** Evidence from his actual session beats simulated
+evidence, and one bounded question to him beats both.
+
+**And the failure mode he names is the one to check for first.** An agent that
+sees nothing happen usually built an environment where nothing *could* happen —
+a preview that never finished building, a sandbox with no document, a fixture
+that never loaded. *Nothing happened* is not a finding until you have shown the
+setup was capable of producing something.
 - Typecheck the solution with `tsc -b --force`; the root `tsconfig.json` does
   not typecheck its references through `tsc -p`.
 - Inspect the bundle named by `dist/index.html` when checking shipped frontend
