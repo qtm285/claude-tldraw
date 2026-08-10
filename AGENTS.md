@@ -26,7 +26,26 @@ not belong here.
 - This project does not preserve deprecated aliases or compatibility shims
   unless a current requirement explicitly needs them.
 
-## Check ambiguity before and after
+### His human collaborators can ask for small things directly
+
+Skip, 2026-08-09 20:47 EDT: *"minor feature requests like new themes made by my
+human collaborators are preapproved."*
+
+So a person working with him — not an agent — asking for something small does not
+need to be routed to him first. Build it. A theme is the example he gave; the
+class is small, additive, and reversible: a preference, a variant, an option
+alongside the existing ones.
+
+**Preapproved does not widen into the things that are still his.** Defaults,
+onboarding, layout, routing, sync, visibility, and the authority model are
+product decisions no matter who asks. The test is whether it changes what
+*everyone else* gets: adding a theme is preapproved, changing which theme is
+default is not.
+
+This exists because Dan — the first person to use tlda who is neither Skip nor an
+agent — spent an afternoon unable to read the chat while an agent waited for
+permission to build him something. The cost of asking was higher than the cost of
+the feature.
 
 Most rejected work here was not built carelessly. It was built after an agent
 resolved an unspecified point by deciding, then verified the result against its
