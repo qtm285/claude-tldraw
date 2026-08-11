@@ -270,6 +270,44 @@ One night produced three of these: a blessed implementation that was never
 merged, themes that had landed hours before an agent was sent to find them, and
 a field that stopped being written that day. Each was first reported as absent.
 
+### Check causal claims against the record before telling Skip
+
+Skip, 2026-08-11 18:35:01 EDT, after a manager blamed `51741fa45`
+for a thread-card regression without checking his approval record: *"I wish you
+would not make me fucking tell you this all fucking time, bro. Like, this is
+shoddy work."*
+
+Before relaying a causal claim, a root cause, or an attributed decision to Skip,
+check it against his record first: his messages, timestamped, read in order. A
+commit that touches the failing code is as likely to be the repair as the fault.
+A log line is evidence about the moment it was written, not the current state. If
+you cannot carry the timestamp and the surrounding thread, you do not yet have
+the claim.
+
+This is the reporting boundary for §"Look for what broke it": reason from the
+regression and the record, not forward from the current code or the newest
+artifact you noticed.
+
+Cost: on 2026-08-11, three cheap checks landed on Skip instead of on the agents:
+
+- A manager attributed a "voicemail" ruling to Skip that he never made, then
+  relayed it to an owner in quote marks. Every supporting hit was in the
+  manager's own messages.
+- A live mint loop on stable was reported from `fleet-nobody-78..82` log lines
+  that were historical. Pending was flat; old lines had been read as current.
+- A manager reported that `51741fa45` caused the thread-card regression. Skip
+  said it was the fix and pointed at the record; the record was 2026-08-10
+  17:36:40 EDT, *"it looks pretty good"*, the day after the commit.
+
+A counterfactual that fails before a fix proves the code changed behavior, not
+that the old behavior was wrong. If the "before" state is what Skip approved,
+the test is asserting the regression, and it looks like rigour while doing it.
+Establish what was approved, what changed after, and what surface now fails
+before naming a cause.
+
+He is not the maintainer of the record. If your claim makes him read the thread
+to disprove you, you have already handed him the work.
+
 ## Never hand Skip a URL carrying someone else's name
 
 `?name=` sets the identity of whoever opens the link, and opening it **persists**
