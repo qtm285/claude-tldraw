@@ -399,6 +399,24 @@ close a tab, or move the camera in his browser. Interactive verification uses th
 pooled browser under `tlda-dev pw`. See `app-testing` §"Skip's Chrome is
 observe-only".
 
+### An open user tab is not a deployment target
+
+Skip, 2026-08-11 17:28:59 EDT: *"An open tab should never fucking reload under
+me."* In the same message, about the auto-reload path, he said: *"I never asked
+for that shit to be built. I had no idea what the fuck was going on when it was
+fucking happening."* At 17:32:30 EDT he gave the consequence: *"If I hear you
+talk about a fucking stale tab ever again, when I am not reporting something
+from that fucking tab? You are fired."*
+
+Do not diagnose a reported app issue as stale user code unless the report came
+from that tab and you have inspected that tab. Removing forced auto-reload was
+correct; do not reopen it as a product question. For your own remote-debugging
+tab, reload if you need to. Never reload, navigate, or disturb Skip's tab.
+
+Cost: on 2026-08-11, a manager treated a Chrome tab Skip was not using as the
+subject of the report and made him maintain the distinction himself. That is user
+blame, and the record now says so.
+
 **Only when that is genuinely impossible, hand him one bounded test** — one exact
 URL, one action, one expected result — rather than building a rig to look at it
 yourself. **Asking him to run a query, read a log, or report a number is not a
@@ -496,6 +514,35 @@ by *names are pointers and a pointer has one target* — which is why it is a
 database index rather than a code check. **When you cannot name a source, that is
 the signal to ask rather than decide.**
 
+### Fleet communication uses mail words
+
+Skip, 2026-08-11 15:23:01 EDT: *"notification delivery, is in fact delivery."*
+In the same message he said inbox delivery is *"not even a thing,"* because the
+inbox is *"reading ... messages on the server."*
+
+Use the mail model:
+
+- **accepted** — the server has taken the message. This is real and must be
+  reliable, but it is not delivery.
+- **delivered** — the recipient was notified: the notice reached the recipient
+  surface through the MCP/harness path. Nothing else earns the word.
+- **read** — the recipient fetched the message. A read can never prove delivery,
+  because polling the inbox can happen without a notification.
+
+Cost: on 2026-08-11, the UI rendered an unread message as a `☐` titled
+`delivered`; `durableDelivery(row)` mapped `accepted` to `delivered`; and the
+MCP tool itself printed `Queued for durable delivery; no server ACK yet`. That
+vocabulary collapse hid a live notification outage.
+
+Skip, 2026-08-11 15:14:51 EDT: *"there should not be ... a semantic layer in
+... transport."* If an ACK decides recipient notification, it belongs in the
+MCP/client-harness layer that actually surfaces the notification, not as a
+transport abstraction and not as server daemon-state modelling.
+
+A wake ACK may be satisfied only by evidence that the notification arrived.
+Never satisfy it from server storage, an open socket, or an inbox read. Each one
+was tried on 2026-08-11 and each produced silent loss.
+
 ## Implementation invariants
 
 ### Use tldraw-native state and interaction
@@ -539,6 +586,45 @@ below still hold.
 - Keep local-checkout and browser edits on the revision-checked source
   transaction boundary. Preserve the separate Git fetch/push semantics of linked
   remotes.
+
+#### The server reports daemon facts; it does not own daemon state
+
+Skip, 2026-08-11 15:16:16 EDT: *"it shouldn't be based on the server maintaining
+state that is the daemons."*
+
+The server may receive facts from a daemon and report failures to a daemon. It
+must not maintain an independent model of machine-local state, pick a
+machine-local remedy, or fall back to a server-local path. Machine-local
+sessions, terminals, MCP restarts, and wake mechanics belong to the owning
+daemon.
+
+Skip, 2026-08-11 15:42:11 EDT: *"the server should tell the daemon ... restart
+your MCP."* That is the boundary: the server observes and reports facts; the
+daemon acts.
+
+Cost: stale `reanimate` text said a route was written only at mint and never
+re-established even after `agent-route` handling was restored. That text misled
+`mint-protocol-split` tonight, so false diagnostics are active defects.
+
+#### A mailbox is not proof of reachability
+
+Skip, 2026-08-11 15:45:39 EDT: *"it should not be possible to have an
+addressable agent without ... daemon root."* At 15:47:56 EDT he repeated that
+connecting a socket to an agent must carry daemon information.
+
+Do not report a recipient as available or reachable unless it has a route-backed
+receive path. A routeless mailbox is not a harmless queue; it is accepted mail
+that can never become delivered.
+
+Cost: `label-chat-filter-fix` held the live chat-filter regression for 96
+minutes while it had no daemon route, so the task list falsely showed coverage
+and messages piled up where no agent could read them.
+
+Separate send-side rule, from existing loaded guidance rather than a new Skip
+ruling: `chat()` is not gated on hibernation or current wake state.
+`docs/fleet-agents.md` already says not to branch on hibernation before sending,
+and the MCP task-report schema says messaging is not gated on recipient wake
+state. Preserve that unless Skip gives a new ruling.
 
 ### Names and labels are one namespace
 
