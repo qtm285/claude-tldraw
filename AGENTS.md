@@ -846,6 +846,28 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
   local server. Do not background `server/unified-server.mjs` directly.
 - Do not use `tlda build` to bypass source-change detection.
 
+### `main` is assembled by cherry-pick, so merged-ness is checked by message
+
+Every landed change exists as **two shas** — the author's commit on their branch,
+and the copy on `main`. So `git merge-base --is-ancestor <author-sha> main`
+reports **not merged** for work that is fully landed. On 2026-08-12 that produced
+six false negatives in one night and sent agents chasing work that had already
+shipped; four of the five owners flagged as having unlanded commits were this
+artifact and only one was real.
+
+Check by subject instead:
+
+```sh
+git log --oneline main --grep="<subject>"
+```
+
+**`git cherry-pick --abort` is destructive here for the same reason.** It unwinds
+to the *sequencer's* start point, which is itself a cherry-pick artifact and can
+be far older than the commit you just tried to pick. It has reset `main` back a
+full day and dropped a night's work off the branch. **Use `git cherry-pick
+--quit`**, which clears the sequencer state without moving `HEAD`, and restore
+the picked commit's files by hand.
+
 ## Documentation boundaries
 
 - [Using tlda](docs/using-tlda.md) is the user reference, including project
