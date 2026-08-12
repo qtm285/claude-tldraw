@@ -515,8 +515,10 @@ never existed.
 This has shipped three times. `agent-route` was announced into a server that had
 dropped its handler eleven days earlier, with the sending side green throughout.
 `adopt-shadow-history` was written on both ends in `d5984269e` and never given a
-server case, so linking a project has silently lost its version history since
-2026-08-10 — measured, and documented in
+server case, so linking a project silently lost its version history from
+2026-08-10 until `9983c2cd8` two days later. **Its proof called
+`exportShadowBundle()` and `adoptShadowHistory()` from one process** — both ends,
+no wire — which is this rule in one line. See
 [Current architecture](docs/current-main-architecture.md) §"A daemon message is
 acknowledged when the dispatcher returns". And because an unrecognised type
 returns normally, **a severed wire reports health**: the message is marked
