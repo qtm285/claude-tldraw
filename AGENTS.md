@@ -90,6 +90,36 @@ the gap between them opens and closes several times a night.
 If you are carrying someone else's disposition forward, the re-check is the work.
 Reformatting their rows is not.
 
+### Either ask a question or don't
+
+Skip, 2026-08-12 20:07 EDT, on a status list handed to him with a **Waiting on you**
+section: *"STOP TELLING ME SHIT IS WAITING ON ME WITHOUT ACTUALLY TELLING ME WHAT THAT
+IS."* A minute later: *"If something needs my fucking input, you fucking tell me."* And:
+*"Don't fucking put a task list in front of me that blames me for not participating."*
+Then the rule in one line: **"either ask a fucking question or fucking don't."**
+
+A row naming a topic is not a question. *"Bots tab — which branch,"* *"two classroom
+choices,"* *"where the way back from a Markdown document lives"* — he cannot answer any
+of those, because none of them contains a question or its options. What they do instead
+is record him as the holdup for something never put to him.
+
+So a status list has **no waiting-on-him section**. Either the row states the question and
+the options in full, in the row, and is therefore an actual question — or it is not waiting
+on him and does not appear as though it is.
+
+**Before writing such a row, check whether he already answered it.** Four of the six on
+that list he had answered in the preceding half hour, and two of those had been put back in
+front of him twice. That is what makes the section read as blame: it bills him for
+questions he already settled. Read forward from his answer, the same as
+§"He can only approve what he was shown".
+
+**And most of these are not questions at all.** §"Don't stop for a decision nobody needs
+to make" in the global contract governs — *"if you put a fucking button in the wrong place,
+I'll fucking tell you to move it."* Placement, wording, and defaults inside a feature he
+asked for are decided by whoever is building it. What genuinely reaches him is what he
+cannot see and correct afterwards: data loss, something that changes what other people
+get, anything irreversible.
+
 ## He can only approve what he was shown
 
 When Skip looks at something and says it is right, he has approved **the thing in
