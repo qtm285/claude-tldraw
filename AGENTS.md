@@ -834,6 +834,9 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
   defines internal grant resolution and persistence.
 - [Fleet chat artifact contract](docs/fleet-chat-artifacts.md) defines shared
   file materialization and rendering.
+- [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
+  `@tldraw/editor` is a fork pinned to a file in this repository, what it
+  carries, and what to re-check on an upgrade. Read it before bumping tldraw.
 
 Exact CLI and MCP arguments come from `tlda --help` and the running MCP schemas.
 Do not duplicate evolving call signatures here.
