@@ -483,6 +483,35 @@ setup was capable of producing something.
 - Inspect the bundle named by `dist/index.html` when checking shipped frontend
   code. Other bundles and source maps are not proof of what the browser loads.
 
+### Prove the wire, not the two ends
+
+A feature that crosses processes is three things: a sender, a receiver, and the
+transport between them. **Calling the sender's function and the receiver's
+function from one test proves both functions and nothing about whether they are
+connected** — and the connection is the only part that can be missing.
+
+**A proof must cross the same boundary the feature crosses in production.** Over
+a socket in production, over that socket in the proof; depends on a deploy, run
+against the deployed artifact; depends on an MCP restart, survive one. Where a
+boundary genuinely cannot be crossed, say **which of the three you exercised** —
+sender, receiver, or wire — rather than reporting the feature as proven.
+
+**The check that beats the proof, because it costs seconds and runs first:** when
+you add a message type, event name, route, or RPC verb, grep the whole tree for
+that literal and count the sites. **One occurrence means nobody is listening.**
+`git log -S <literal> --all` also distinguishes a dropped handler from one that
+never existed.
+
+This has shipped three times. `agent-route` was announced into a server that had
+dropped its handler eleven days earlier, with the sending side green throughout.
+`adopt-shadow-history` was written on both ends in `d5984269e` and never given a
+server case, so linking a project has silently lost its version history since
+2026-08-10 — measured, and documented in
+[Current architecture](docs/current-main-architecture.md) §"A daemon message is
+acknowledged when the dispatcher returns". And because an unrecognised type
+returns normally, **a severed wire reports health**: the message is marked
+processed and positively acknowledged to a sender that has no other signal.
+
 Tests are appropriate for failures that can be both silent and destructive,
 such as lost history, dropped communication, or stored document state diverging
 from visible state. A passing suite does not replace direct verification.
