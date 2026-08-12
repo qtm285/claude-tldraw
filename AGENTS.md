@@ -823,6 +823,10 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
   linking, Markdown, agents, permissions, and local configuration.
 - [Current architecture](docs/current-main-architecture.md) describes the
   running system and authority boundaries.
+- [The window manager](docs/window-manager.md) describes the layer model, the
+  fleet HUD as a second viewport over the same store, and — in its errata
+  section — where the implementation currently departs from that design. Read it
+  before changing panel placement, clip panels, or HUD coordinates.
 - [Identity and labeling](docs/identity-and-labeling.md) describes the one
   namespace of names and labels, which history tables are folds over events and
   which are the record, and where the namespace rule is enforced. Read it before
