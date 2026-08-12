@@ -478,8 +478,18 @@ sees nothing happen usually built an environment where nothing *could* happen �
 a preview that never finished building, a sandbox with no document, a fixture
 that never loaded. *Nothing happened* is not a finding until you have shown the
 setup was capable of producing something.
-- Typecheck the solution with `tsc -b --force`; the root `tsconfig.json` does
-  not typecheck its references through `tsc -p`.
+- Typecheck the solution with `tsc -b`, **once, when you are about to commit** —
+  not per iteration. `-b` is the load-bearing part: the root `tsconfig.json` is a
+  solution file (`"files": []` plus project references), so `tsc -p` typechecks
+  **zero files and exits 0 on any input** and does not follow references.
+  - **Add `--force` only in a worktree with symlinked `node_modules`**, which is
+    the case it was written for — there a stale `.tsbuildinfo` can be served as a
+    cache hit. In the shared checkout it only discards the cache and rebuilds
+    everything, and ten agents doing that concurrently is most of a load average
+    of 46.
+  - If the tree is red on **someone else's** uncommitted work, commit your own
+    paths with `-o` and say so in the message. Do not loop trying to get a clean
+    global build in a checkout other agents are writing to.
 - Inspect the bundle named by `dist/index.html` when checking shipped frontend
   code. Other bundles and source maps are not proof of what the browser loads.
 
