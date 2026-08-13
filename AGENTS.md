@@ -25,6 +25,18 @@ not belong here.
   retries, caches, or compatibility around it.
 - This project does not preserve deprecated aliases or compatibility shims
   unless a current requirement explicitly needs them.
+- **A revert is not done until the control goes too.** Deleting a feature and
+  leaving its settings row behind produces a control that writes a value nobody
+  reads — which reads to Skip as the app lying to him, not as debris. Twice in
+  this repo a revert deleted a component, its CSS and hundreds of lines while
+  never touching `PrefsTab.tsx`. The tell is a diffstat that removes a feature's
+  implementation files with the settings file absent from the list.
+
+  An audit on 2026-08-12 found **8 of 45 settings controls inert**, by four
+  distinct routes, only one of which a grep for the pref key can find.
+  [Settings controls](docs/settings-controls.md) names all four and carries the
+  standing checks, including the one for a CSS variable that nothing consumes —
+  which no pref-key search can ever surface.
 
 ### His human collaborators can ask for small things directly
 
@@ -884,6 +896,21 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
   protects it. Amend afterwards if verification changes the result.
 - Do not deploy a branch or worktree. Live deployments use committed `main`
   through the documented wrapper.
+- **Nothing serializes deploys, so only one agent pushes to a deploy remote.**
+  That agent is the chief of staff, who owns the release path. Land your work on
+  a branch and tell them. If you believe something must go out sooner, say so and
+  say why; do not decide it yourself, and never push "just to test the pipeline".
+
+  On 2026-08-13 two `fly deploy` runs started six seconds apart against the same
+  app. The later one finished first and left its machine up; the earlier one then
+  replaced that machine, waited on a **different** machine id, watched it reach
+  `stopped`, reported `✔ … is now in a good state`, and **exited 0**. Skip's box
+  served nothing for six minutes while the pipeline reported success.
+
+  **The post-deploy `verify_serving` guard cannot prevent this** — it runs after
+  `fly deploy` has already executed, and with two deploys racing either one can
+  pass its check and be replaced a second later. It is a point-in-time sample
+  with nothing holding the state.
 - Use `tlda server start`, `tlda server stop`, and `tlda server status` for a
   local server. Do not background `server/unified-server.mjs` directly.
 - Do not use `tlda build` to bypass source-change detection.
@@ -920,6 +947,11 @@ the picked commit's files by hand.
   fleet HUD as a second viewport over the same store, and — in its errata
   section — where the implementation currently departs from that design. Read it
   before changing panel placement, clip panels, or HUD coordinates.
+- [Chat rendering and the scroll model](docs/chat-rendering.md) describes what a
+  chat row is, who may write `scrollTop` and when, the re-entrancy map between
+  our writes and the observers they trigger, and the reader-mode state machine —
+  with an errata section for where the implementation departs from it. Read it
+  before changing anything about chat scrolling, anchoring, or row height.
 - [Identity and labeling](docs/identity-and-labeling.md) describes the one
   namespace of names and labels, which history tables are folds over events and
   which are the record, and where the namespace rule is enforced. Read it before
@@ -931,6 +963,14 @@ the picked commit's files by hand.
   defines internal grant resolution and persistence.
 - [Fleet chat artifact contract](docs/fleet-chat-artifacts.md) defines shared
   file materialization and rendering.
+- [Settings controls](docs/settings-controls.md) records the four ways a settings
+  control goes inert here and the standing checks for each, including the CSS
+  variable case no pref-key search can find. Read it before adding a control to
+  the settings panel, and after reverting anything that has one.
+- [Naming errata](docs/naming-errata.md) lists names that misdescribe what they
+  do, with what they actually mean. A rename in a live path is a real change; a
+  written-down lie costs nothing and stops the next person inheriting it. Add to
+  it when you hit one, and delete the entry in the commit that fixes it.
 - [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
   `@tldraw/editor` is a fork pinned to a file in this repository, what it
   carries, and what to re-check on an upgrade. Read it before bumping tldraw.
