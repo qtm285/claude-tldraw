@@ -25,6 +25,18 @@ not belong here.
   retries, caches, or compatibility around it.
 - This project does not preserve deprecated aliases or compatibility shims
   unless a current requirement explicitly needs them.
+- **A revert is not done until the control goes too.** Deleting a feature and
+  leaving its settings row behind produces a control that writes a value nobody
+  reads — which reads to Skip as the app lying to him, not as debris. Twice in
+  this repo a revert deleted a component, its CSS and hundreds of lines while
+  never touching `PrefsTab.tsx`. The tell is a diffstat that removes a feature's
+  implementation files with the settings file absent from the list.
+
+  An audit on 2026-08-12 found **8 of 45 settings controls inert**, by four
+  distinct routes, only one of which a grep for the pref key can find.
+  [The settings audit](scratch/settings-audit-2026-08-13.md) names all four and
+  carries the standing checks, including the one for a CSS variable that nothing
+  consumes — which no pref-key search can ever surface.
 
 ### His human collaborators can ask for small things directly
 
