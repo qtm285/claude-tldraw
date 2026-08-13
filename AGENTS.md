@@ -896,6 +896,21 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
   protects it. Amend afterwards if verification changes the result.
 - Do not deploy a branch or worktree. Live deployments use committed `main`
   through the documented wrapper.
+- **Nothing serializes deploys, so only one agent pushes to a deploy remote.**
+  That agent is the chief of staff, who owns the release path. Land your work on
+  a branch and tell them. If you believe something must go out sooner, say so and
+  say why; do not decide it yourself, and never push "just to test the pipeline".
+
+  On 2026-08-13 two `fly deploy` runs started six seconds apart against the same
+  app. The later one finished first and left its machine up; the earlier one then
+  replaced that machine, waited on a **different** machine id, watched it reach
+  `stopped`, reported `✔ … is now in a good state`, and **exited 0**. Skip's box
+  served nothing for six minutes while the pipeline reported success.
+
+  **The post-deploy `verify_serving` guard cannot prevent this** — it runs after
+  `fly deploy` has already executed, and with two deploys racing either one can
+  pass its check and be replaced a second later. It is a point-in-time sample
+  with nothing holding the state.
 - Use `tlda server start`, `tlda server stop`, and `tlda server status` for a
   local server. Do not background `server/unified-server.mjs` directly.
 - Do not use `tlda build` to bypass source-change detection.
