@@ -947,6 +947,10 @@ the picked commit's files by hand.
   control goes inert here and the standing checks for each, including the CSS
   variable case no pref-key search can find. Read it before adding a control to
   the settings panel, and after reverting anything that has one.
+- [Naming errata](docs/naming-errata.md) lists names that misdescribe what they
+  do, with what they actually mean. A rename in a live path is a real change; a
+  written-down lie costs nothing and stops the next person inheriting it. Add to
+  it when you hit one, and delete the entry in the commit that fixes it.
 - [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
   `@tldraw/editor` is a fork pinned to a file in this repository, what it
   carries, and what to re-check on an upgrade. Read it before bumping tldraw.
