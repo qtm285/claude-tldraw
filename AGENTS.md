@@ -932,6 +932,11 @@ the picked commit's files by hand.
   fleet HUD as a second viewport over the same store, and — in its errata
   section — where the implementation currently departs from that design. Read it
   before changing panel placement, clip panels, or HUD coordinates.
+- [Chat rendering and the scroll model](docs/chat-rendering.md) describes what a
+  chat row is, who may write `scrollTop` and when, the re-entrancy map between
+  our writes and the observers they trigger, and the reader-mode state machine —
+  with an errata section for where the implementation departs from it. Read it
+  before changing anything about chat scrolling, anchoring, or row height.
 - [Identity and labeling](docs/identity-and-labeling.md) describes the one
   namespace of names and labels, which history tables are folds over events and
   which are the record, and where the namespace rule is enforced. Read it before
