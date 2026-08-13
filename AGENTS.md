@@ -34,9 +34,9 @@ not belong here.
 
   An audit on 2026-08-12 found **8 of 45 settings controls inert**, by four
   distinct routes, only one of which a grep for the pref key can find.
-  [The settings audit](scratch/settings-audit-2026-08-13.md) names all four and
-  carries the standing checks, including the one for a CSS variable that nothing
-  consumes — which no pref-key search can ever surface.
+  [Settings controls](docs/settings-controls.md) names all four and carries the
+  standing checks, including the one for a CSS variable that nothing consumes —
+  which no pref-key search can ever surface.
 
 ### His human collaborators can ask for small things directly
 
@@ -943,6 +943,10 @@ the picked commit's files by hand.
   defines internal grant resolution and persistence.
 - [Fleet chat artifact contract](docs/fleet-chat-artifacts.md) defines shared
   file materialization and rendering.
+- [Settings controls](docs/settings-controls.md) records the four ways a settings
+  control goes inert here and the standing checks for each, including the CSS
+  variable case no pref-key search can find. Read it before adding a control to
+  the settings panel, and after reverting anything that has one.
 - [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
   `@tldraw/editor` is a fork pinned to a file in this repository, what it
   carries, and what to re-check on an upgrade. Read it before bumping tldraw.
