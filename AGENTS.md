@@ -534,27 +534,6 @@ setup was capable of producing something.
     global build in a checkout other agents are writing to.
 - Inspect the bundle named by `dist/index.html` when checking shipped frontend
   code. Other bundles and source maps are not proof of what the browser loads.
-- **`node_modules` is not evidence about `package.json`, and a local `dist/` is
-  not evidence about a deployment.** Both sit next to the thing you want and
-  answer confidently about themselves.
-
-  On 2026-08-13 the shared checkout's installed `@tldraw/editor` was **23 hours
-  older than the pin beside it** — `package.json` named `-tlda.11`, which
-  carries a wheel-direction fix, while `node_modules` still held the version
-  with the bug. Two agents read the installed package to ask whether the fix had
-  landed; both got **no**, correctly about the machine and wrongly about what
-  ships. A third read an untracked local `dist/` bundle and reported it as "the
-  CSS his browser loads".
-
-  **Check the artifact that actually travels:** the `.tgz` in `vendor/` for a
-  pinned dependency, the served bundle for a deployment, the commit for a claim
-  about source. The deploy builds in its own fresh checkout, so a stale install
-  here says nothing about it — but anything built **locally** on a stale install
-  embeds the old dependency, silently.
-
-  **And a grep is evidence about a pattern, not about a fact.** `0.0375` ships
-  minified as `.0375`; `camera.y - delta.y` ships as `e.y+L.y/e.z`. A pattern
-  that cannot survive the build reports absence for everything.
 
 ### Prove the wire, not the two ends
 
