@@ -364,6 +364,41 @@ One night produced three of these: a blessed implementation that was never
 merged, themes that had landed hours before an agent was sent to find them, and
 a field that stopped being written that day. Each was first reported as absent.
 
+### The mirror: a durable note can be the thing that expired
+
+The rule above says do not reason forward from the current code toward *this was
+never built*. **The same mistake runs the other way, and it is easier to make
+because it feels like diligence:** reasoning forward from a note in this file, a
+comment, or a commit subject toward *the current code is wrong* — when the note
+is what went stale.
+
+On 2026-08-17 a commit review flagged two commits as contradicting recorded
+behaviour. Both were the **repairs**, and each note described the behaviour
+before its fix:
+
+- `019ec5135` "A route survives the agent's death" against *death destroys the
+  route*. Death destroyed it until 08-10; that commit is what stopped it.
+- `c44d566dc` "Treat daemon hibernation as negative liveness" against
+  *hibernation does not stop an agent*. Still true, and untouched by it — what
+  the commit fixed was a daemon reporting `hibernating` calling `markAgentAlive`,
+  so the hibernation path was manufacturing the stale awake rows.
+
+**The tell is the same in both directions: a claim about behaviour with no date
+on it.** A note says what was true when someone wrote it, and nothing in it says
+when that was.
+
+**The check that resolved both, and it is cheap: find the commit that last
+touched the mechanism and read its message, before trusting either the note or
+the code.** Neither of these needed his record read — both were *what does the
+code do today* questions wearing the costume of *what did he ask for*.
+
+And when a note survives its mechanism, **fix the note in the same pass**. The
+comment justifying route-survives-death still said `setAgentDaemonRoute` is
+"called from exactly one place in the server, at mint"; `main` has two, neither
+at mint, both added after the comment. The conclusion was right and the stated
+reason was false — which is the shape that misleads whoever reads it to decide
+something adjacent.
+
 ### Check causal claims against the record before telling Skip
 
 Skip, 2026-08-11 18:35:01 EDT, after a manager blamed `51741fa45`
