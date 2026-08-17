@@ -982,6 +982,33 @@ Check by subject instead:
 git log --oneline main --grep="<subject>"
 ```
 
+**The same artifact makes `git diff` lie, and that one is worse** — a false
+ancestry check sends you looking for work, but a false diff tells you what the
+code *is*. Diffing against a branch that is not an ancestor shows its committed
+content as changes:
+
+- `git diff <sibling-sha>..main` renders everything the sibling added as
+  **deletions on `main`**, which reads as a regression somebody shipped.
+- `git diff main -- <file>` on a checkout sitting on a sibling branch mixes that
+  branch's *committed* content into the working-tree delta, so settled work
+  reads as **uncommitted and about to be lost**.
+
+Both happened on 2026-08-17. An agent landing a fix nearly reported that `main`
+had deleted `recordedMintIdentity`, which `main` never had. Separately a chief
+read a checkout as holding 49 lines of endangered work when the genuinely
+uncommitted delta was one stale comment — and preserving it would have reverted
+a *correction* back into the tree.
+
+**So before believing a diff or an ancestry check, establish the relationship:**
+
+```sh
+git merge-base --is-ancestor <sha> main   # false ⇒ every diff against it is sideways
+```
+
+When it is not an ancestor, compare against the branch that actually holds the
+work — `git diff <branch> -- <file>`, where zero means captured — and check
+landedness by message as above. A sideways diff is not evidence about `main`.
+
 **`git cherry-pick --abort` is destructive here for the same reason.** It unwinds
 to the *sequencer's* start point, which is itself a cherry-pick artifact and can
 be far older than the commit you just tried to pick. It has reset `main` back a
