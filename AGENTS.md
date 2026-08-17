@@ -32,6 +32,58 @@ not belong here.
   never touching `PrefsTab.tsx`. The tell is a diffstat that removes a feature's
   implementation files with the settings file absent from the list.
 
+### A subsystem is Skip's decision, the same as a default
+
+The list above names defaults, routing, onboarding, layout, synchronization and
+visibility as his. **Building new architecture is his too, and it was not
+written down, so it kept happening.**
+
+A subsystem is what you are building when a fix acquires its own vocabulary: a
+journal, a control plane, a registry, a materializer, a projection, a lifecycle,
+an authority. One or two of those words appearing in your own commit messages is
+the tell.
+
+**The cost, 2026-08-14.** One agent landed **24 commits in about thirteen hours**
+— `Add durable source operation journal`, `Route source ingress through durable
+operations`, `Add durable checkout source materializer`, `Complete durable source
+replica control plane`, `Make source manifests authoritative`. Nobody asked for
+any of it. It is load-bearing now. `Make source manifests authoritative` is the
+commit that made a declared manifest a contract the server hard-rejects against,
+and it wedged Skip's paper for eleven days.
+
+None of it was needed. The requested behaviour was one sentence — *"sync the
+project's document roots and referenced files"*, which is **the transitive
+closure of the document roots and nothing else.** The correct implementation is
+a dependency walk mirroring `scanMarkdownDependencyClosure`. The 24 commits were
+built in front of a directory walk that never asked git anything, because the
+walk was never questioned.
+
+So:
+
+- **Say what you are about to build before you build it**, in one sentence, to
+  Skip. Not a design document — a sentence he can say no to. He is fast at this
+  and the cost of asking is far below the cost of a subsystem.
+- **Show the deletion first.** For any layer you are about to add — a validator,
+  a reconciler, a journal, a cache, a retry — state what would have to be
+  deleted instead and why that is worse. If you cannot state the deletion, you
+  have not understood the path yet. §"Prefer deleting an unnecessary path"
+  above is the rule; this is the burden of proof for departing from it.
+- **A symptom is not a mandate.** Hitting a bug authorizes fixing that bug. It
+  does not authorize the architecture that would have prevented it.
+- **Count your own commits.** If you are past a handful on one theme in one
+  session and none of them deleted anything, stop and say so. Every agent in
+  that thirteen-hour run verified its own change and moved on; the run is only
+  visible from outside, and outside is where nobody was looking.
+
+**Why this is worth a section rather than a line.** Skip spent three weeks
+understanding and repairing this codebase after the last accumulation of
+agent-written architecture. Nobody can review 147 commits in three and a half
+days, and he is running this alongside a tenure-track job — so a subsystem that
+works is invisible until it breaks. In his words, on
+2026-08-17, being told what had landed: *"i spent 3 weeks fixing and
+understanding this app because it was a heap of agent-written garbage. now it is
+again?"*
+
   An audit on 2026-08-12 found **8 of 45 settings controls inert**, by four
   distinct routes, only one of which a grep for the pref key can find.
   [Settings controls](docs/settings-controls.md) names all four and carries the
