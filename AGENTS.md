@@ -593,6 +593,13 @@ An empty answer and a broken question look identical, and on 2026-08-17 that
 cost two agents a wrong conclusion each, one of which nearly sent a second agent
 editing into a file another was working in.
 
+**The specific commands below are the content, not an aside, so this section is
+not the machine-specific operations this file excludes.** These are the
+instruments agents verify with. A rule about trusting negatives is unusable
+without knowing which local tool silently produces one — the principle alone
+saved nobody on the day it was written, and two agents hit the same trap hours
+apart. Update the particulars when the machine changes; do not prune them.
+
 **`find -newermt` does not work here.** This machine's `find` is `bfs`: it
 rejects the GNU relative form, writes `bfs: error: Invalid timestamp` to stderr,
 **exits 0, and prints nothing to stdout**. Under `2>/dev/null` it is
