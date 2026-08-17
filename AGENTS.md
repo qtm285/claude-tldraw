@@ -32,6 +32,12 @@ not belong here.
   never touching `PrefsTab.tsx`. The tell is a diffstat that removes a feature's
   implementation files with the settings file absent from the list.
 
+  An audit on 2026-08-12 found **8 of 45 settings controls inert**, by four
+  distinct routes, only one of which a grep for the pref key can find.
+  [Settings controls](docs/settings-controls.md) names all four and carries the
+  standing checks, including the one for a CSS variable that nothing consumes —
+  which no pref-key search can ever surface.
+
 ### A subsystem is Skip's decision, the same as a default
 
 The list above names defaults, routing, onboarding, layout, synchronization and
@@ -83,12 +89,6 @@ works is invisible until it breaks. In his words, on
 2026-08-17, being told what had landed: *"i spent 3 weeks fixing and
 understanding this app because it was a heap of agent-written garbage. now it is
 again?"*
-
-  An audit on 2026-08-12 found **8 of 45 settings controls inert**, by four
-  distinct routes, only one of which a grep for the pref key can find.
-  [Settings controls](docs/settings-controls.md) names all four and carries the
-  standing checks, including the one for a CSS variable that nothing consumes —
-  which no pref-key search can ever surface.
 
 ### His human collaborators can ask for small things directly
 
