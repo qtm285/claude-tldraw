@@ -698,6 +698,24 @@ acknowledged when the dispatcher returns". And because an unrecognised type
 returns normally, **a severed wire reports health**: the message is marked
 processed and positively acknowledged to a sender that has no other signal.
 
+**The same silence arrives by a second route: an unfinished handshake.** A
+daemon socket that connects to `/ws/fleet-daemon` without sending `daemon-hello`
+stays open and accepts writes, and an `activity-event` sent on it is dropped —
+no error, no log line, no ack, and the socket stays up. On 2026-08-17 that cost
+two runs of a new wire test, which reported the feature under test as broken
+while the feature was fine. Sending `daemon-hello` first made the same test pass
+unchanged. Only `activity-event` was checked; the shape of the drop suggests it
+is not the only message type this applies to.
+
+What separated rig-broken from feature-broken was **querying a pre-existing path
+that reads the same state**. The new code said nothing had happened; so did the
+old polling route, which had been working for weeks. Two independent readers
+agreeing that nothing arrived is evidence about the *sender*, not the receiver.
+So when a wire proof comes back empty, ask what else can see that state and read
+it too, before you believe the thing you just wrote is the broken part. This is
+§"A browser is a last resort" in a different costume — *they set up environments
+in which nothing happens and then are like, oh, nothing's happening*.
+
 Tests are appropriate for failures that can be both silent and destructive,
 such as lost history, dropped communication, or stored document state diverging
 from visible state. A passing suite does not replace direct verification.
