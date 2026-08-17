@@ -480,6 +480,46 @@ tests, logs, database rows, and source inspection are diagnostics.
 - When supported automation cannot exercise the behavior, state the exact
   missing proof rather than manufacturing a proxy.
 
+### An instrument that answers is not an instrument that measured
+
+The failure is never "I had no evidence". It is that the check **returned
+something**, and what it returned was the answer to a question nobody asked.
+2026-08-17 produced four of these in one night, from one agent, all reported as
+verification at the time:
+
+| what was run | what it looked like | what it actually said |
+|---|---|---|
+| `npx tsc -b \| tail -2; echo $?` | typecheck clean | **`tail` exited 0.** `$?` after a pipeline is the last command's status |
+| `find … -newermt …` (BSD/`bfs`) | no matching files | exits 0 printing nothing — for a bad flag as readily as for no matches |
+| `max(attempts)` over an outbox | a live retry loop at 110,081 | those rows were **dead-lettered two days earlier**; the aggregate spanned both |
+| a guard patching `fs.readFileSync` | sync IO on request paths is caught | blind to `import { readFileSync } from 'fs'`, which is **29 of 35** server modules |
+
+Each cost real work: two agents were told to release a hold on a paper, a
+subsystem shipped that could not see the file it was written for, and every
+"typecheck clean" in a night of commit messages was `tail`.
+
+**The tell they share: the check cannot distinguish the state you care about from
+a state you did not think about.** No output is not no matches. An aggregate over
+a table is not an aggregate over the live rows. A patched namespace is not a
+patched binding.
+
+**So run the counterfactual — make it fail on purpose.** Break the thing the
+check exists to catch and confirm the check goes red. Every one of the four above
+is caught in seconds by it, and it is the only routine that distinguishes a green
+check from a check that cannot go red. `bin/await-fleet-store-guard.mjs` is the
+worked example: it asserts the catastrophic shape is rejected *and* the allowed
+shapes are not, because a rule that fires on correct code gets disabled and then
+catches nothing.
+
+**And before building an instrument, ask what already measures this.** The guard
+in the table was deleted the same night, not because it was blind — that was
+fixable — but because `server/lib/lag-profiler.mjs` already samples the isolate
+and walks the stack, so it attributes any stall to the frames inside it,
+regardless of API or import form, with no flag. It is what produced the
+attribution that found the fault in the first place. **A second instrument for a
+job already done is the same fault as a second ingester**, and it is harder to
+see because building it feels like rigour.
+
 ### A browser is a last resort, not a gate
 
 Skip, 2026-08-09 03:16–03:19 EDT, after thirteen agents each started a preview
