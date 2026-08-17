@@ -387,6 +387,14 @@ before its fix:
 on it.** A note says what was true when someone wrote it, and nothing in it says
 when that was.
 
+**A line number is one of these**, and it is the one everybody writes anyway. On
+the night this section was added, its own author and its reviewer both cited
+`unified-server.mjs` line numbers for the same two call sites and disagreed —
+because a commit in between had inserted nineteen lines. They were stale inside
+an hour, in the same commit that added this section. **Cite the commit and what
+the call site *is*** — "the login path", "the `agent-route` handler" — neither of
+which moves when someone inserts a middleware.
+
 **The check that resolved both, and it is cheap: find the commit that last
 touched the mechanism and read its message, before trusting either the note or
 the code.** Neither of these needed his record read — both were *what does the
