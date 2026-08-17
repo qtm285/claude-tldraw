@@ -587,6 +587,36 @@ setup was capable of producing something.
 - Inspect the bundle named by `dist/index.html` when checking shipped frontend
   code. Other bundles and source maps are not proof of what the browser loads.
 
+### A negative result is only evidence once the instrument can produce a positive
+
+An empty answer and a broken question look identical, and on 2026-08-17 that
+cost two agents a wrong conclusion each, one of which nearly sent a second agent
+editing into a file another was working in.
+
+**`find -newermt` does not work here.** This machine's `find` is `bfs`: it
+rejects the GNU relative form, writes `bfs: error: Invalid timestamp` to stderr,
+**exits 0, and prints nothing to stdout**. Under `2>/dev/null` it is
+indistinguishable from "nothing matched" — and it was run against a directory
+whose files were being written as the command ran. Use `-mmin -N`, or
+`stat -f %m` and compare epoch seconds.
+
+**Timestamps: `ls` and `stat` print local time, logs are UTC, and this machine is
+UTC−4.** Two events four hours apart therefore print the same digits, which read
+as a coincidence worth building a theory on. Twice in one day a `12:13` from
+`stat` was matched against a `12:13:52Z` from a log and called the same moment.
+Compare epoch seconds, or print both zones.
+
+**The general form, and it is the one worth carrying:** before believing a
+negative, show the instrument returning a positive on a case you know is true —
+a file you just touched, an agent you know is healthy, a string you know is
+present. Cheaper than every reversal it prevents.
+
+**And prefer the mechanism to a better measurement of the symptom.** Every
+reversal on 2026-08-17 was settled by finding the thing underneath — a per-agent
+ingestion cursor, `_inFlight.delete` sitting inside a handler behind a stalled
+promise chain, a retry re-sending bytes captured at first send. None was settled
+by re-measuring CPU, mtimes, or status fields more carefully.
+
 ### Prove the wire, not the two ends
 
 A feature that crosses processes is three things: a sender, a receiver, and the
