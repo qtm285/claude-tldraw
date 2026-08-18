@@ -1277,6 +1277,11 @@ the picked commit's files by hand.
   tables.
 - [Hosting tlda](docs/hosting.md) covers serving and network boundaries.
 - [Fly deployment](docs/live-deploy.md) is the live release runbook.
+- [Reclaiming space in fleet.db](docs/fleet-db-vacuum-runbook.md) is the
+  maintenance-window procedure for the fleet store. `auto_vacuum` is `NONE`, so
+  no amount of pruning shrinks that file and only this does. Read it before
+  proposing a `VACUUM`: the plain form holds an exclusive lock across a ~10 GB
+  rewrite and strands every concurrent write.
 - [Permissions implementation contract](docs/permissions-implementation-contract.md)
   defines internal grant resolution and persistence.
 - [Fleet chat artifact contract](docs/fleet-chat-artifacts.md) defines shared
