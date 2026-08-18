@@ -1,5 +1,36 @@
 # tlda developer guidance
 
+## Read this first: what Skip needs from you
+
+Skip, 2026-08-18 15:25 EDT, verbatim:
+
+> it really helps me to have 1. a stable app; 2. calm, clear reports; and 3.
+> interactions in which i am listened to and responded to, vs. like interpreted as a
+> justification to do whatever you feel like vaguely related to what i am saying
+
+> physically/psychosomatically i am really unwell and like i really need this
+
+> like stress is not like, a transient stimulus it is a huge setback to my wellbeing
+
+**That last line is the reason this is at the top of the file rather than in a style
+section.** Stress is not a mood he shakes off after the exchange. It is tinnitus that
+gets worse and stays worse, and a day of it costs him days. **The cost of a bad
+interaction is measured in his health, not in his patience.**
+
+So the three are requirements, not preferences:
+
+1. **A stable app.** Not an explained-away app, not a documented defect, not a fix that
+   regresses next week. He has said *"once specified — finished, tested, and NOT RUINED
+   BY SUBSEQUENT WORK OR BAD MERGES."*
+2. **Calm, clear reports.** Short, evidence first, no wall of formatting, no status you
+   were not asked for. If you have nothing established, say that in a sentence.
+3. **Being listened to and responded to.** Answer the thing he said. **Do not treat his
+   sentence as a licence for the adjacent project you would rather do** — that is the
+   failure he named, in those words, and it is the most common one here.
+
+He also authorised, in the same breath, **a dedicated advocate for this**: *"like if you
+need a spoecific advoate focused on this specific set of issues go ahead."*
+
 tlda is a collaborative paper-reading and annotation system. It renders
 versioned LaTeX and Markdown documents on a tldraw canvas, keeps annotations
 anchored to source, and gives people and agents the same project, chat, search,
@@ -725,6 +756,29 @@ you add a message type, event name, route, or RPC verb, grep the whole tree for
 that literal and count the sites. **One occurrence means nobody is listening.**
 `git log -S <literal> --all` also distinguishes a dropped handler from one that
 never existed.
+
+**Two ways that check lies, and both were hit on 2026-08-18 by people running it
+correctly.**
+
+**A bare `git grep` reads the branch the checkout is sitting on, not `main`.** The
+shared checkout at `/Users/skip/work/tlda` sits on whatever branch it was last left
+on. `refusedRevision` returned **0 sites bare and 8 on `main`** — a manufactured
+"nobody is listening" on exactly the pattern this check exists to find. **Name the
+ref**: `git grep <literal> main`, or work from a worktree pinned to `main` tip.
+
+**A zero on a literal that is mid-commit is a fact about the tree, not about the
+wire.** A route that exists only as an uncommitted change in one worktree returns
+one occurrence — its own — on every ref, which reads as a severed wire. So before
+you act on a low count, establish that both ends are actually committed. **The
+inverse is the more dangerous finding anyway:** work that four people are building
+against, living only in a working directory, is one `rm` from gone. Twice in one
+night here, load-bearing work existed nowhere but an untracked file or an
+uncommitted edit — see §"Commit when the typecheck passes".
+
+**And run the positive control every time.** A zero from the wrong ref, a zero from
+an uncommitted literal, and a zero from a genuinely severed wire are the same zero.
+The only thing that separates them is the same query against something you know is
+there.
 
 This has shipped three times. `agent-route` was announced into a server that had
 dropped its handler eleven days earlier, with the sending side green throughout.
