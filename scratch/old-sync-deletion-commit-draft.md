@@ -11,6 +11,13 @@
 > the blanks are the fix. Fill them from a sweep run **at the moment you write
 > the commit**, against `main` as it then stands.
 >
+> **Concrete evidence that this is not a precaution.** During the single session
+> that wrote this file, `main` moved twice: the sweep read `5338b1c32` at 16:32
+> and `d7f6dfed0` at 17:47, about an hour apart. **Any number recalled from that
+> session — from memory, from the chat thread, or from this file's own git
+> history — already describes a tree that no longer exists.** That is why these
+> are blanks rather than figures with a timestamp beside them.
+>
 > **Both files are force-added past `.gitignore`.** `scratch/` is ignored and
 > that rule is right for reports — things recording what was already
 > established. These two are neither: nothing else can reconstruct them, and
