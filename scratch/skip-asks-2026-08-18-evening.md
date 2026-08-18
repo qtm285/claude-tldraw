@@ -111,6 +111,111 @@ This belongs to the audit rather than to a new project: *"someone added a bunch 
 keep/cut question about commits in the window, and the slow-query log is the instrument for
 finding them rather than the deliverable.
 
+## Design rulings, 16:05–16:15 EDT — one way a file gets into sync {#one-way-in}
+
+Given while the strip was running. **These are rulings, not preferences**, and they are the
+reason several things are being deleted rather than migrated.
+
+**Sync is the new design and the old one comes out. Now.** 15:14 EDT:
+
+> sync is the new design / stip the old design the fuck out NOPW / NOW NOW
+
+And the reason it has to be a deletion rather than a fix, 15:15:
+
+> the last chief, despite that instruction, spent the entire night patching bugs in the old
+> sync / when their first instruction was to get rid of it
+
+**Math-note file sync goes.** He asked whether math notes were still file-synced, was told yes
+— `MathNoteShape.tsx:445–470`, a debounced 1 s push of the whole note text as `main.md`
+through the old `/push` — and ruled: **"yes. that goes"**.
+
+**The `scratch-doc` path goes with it**, 16:12:
+
+> 'scratch' format goes
+
+> like, we handle adding synced files via markdown embeds, edited using the standard fucking
+> like codemirror editor
+
+> **stickies are just stickies**
+
+**The rule those three sentences state:** there is **one** way a file gets into sync — a
+markdown embed, edited in CodeMirror, like any other project file. **A canvas note is a note
+and syncs nothing.** Anything that gives a sticky-shaped object a file behind it is the thing
+being removed. (There is no project format literally called `scratch`; what exists is the
+scratch-doc drop path at `NoteDropHandler.tsx:82` and the `scratch-` project naming at
+`MarkdownDropHandler.tsx:25`.)
+
+**A one-shot convert is fine, and already exists.** 16:14–16:15:
+
+> if we want a convenience to like, convert a sticky or set of stickies into an in-project
+> markdown doc, like that's fine
+
+> actually we already have that — it's just treated as an emergency tool rather than real
+> workflow
+
+**I first read that as `POST /:name/inject` and told him it was protected from the strip. That
+was wrong**, and he corrected it himself a minute later by explaining what scratch actually
+was, 16:10–16:12:
+
+> scratch was this idea we'd have all this garbage about like extracting/injecting auxilliary
+> files into the doc
+
+> like the mcp tools are gone afaik / possibly some server-side junk remains
+
+> replacement workflow is like, **just parallel markdown files we copy from verbatim**
+
+> **we just use markdown docs that are actually in the project** and like, if we want
+> conveniences to move shit around in the like, ui or mcp, that's fine. **it's not core
+> beavior**
+
+**So `/inject` is the junk, not the convenience, and the scratch machinery is a trio that goes
+together:**
+
+| route | what it does |
+|---|---|
+| `POST /:name/extract` (`server/routes/projects.mjs:2387`) | source lines → `scratch/<slug>.md` |
+| `POST /:name/inject` (`:2463`) | markdown → LaTeX → writes `.tlda/scratch/<label>.tex` |
+| `POST /:name/input-scratch` (`:2821`) | that `.tex` into the document |
+
+**`/inject` never writes into the document** — it produces an auxiliary file and returns its
+path, and `/input-scratch` is what references it. That is the mechanism he is describing, and
+it is why "we already have that convenience" did not mean this.
+
+**The replacement needs no code:** a parallel markdown doc that is actually in the project,
+copied from verbatim, edited in CodeMirror like any other file.
+
+**"It's not core behavior" is the load-bearing phrase.** A convenience for moving content
+around in the UI or MCP is permitted later, not requested now, and **not a reason to keep any
+of the three alive as scaffolding.**
+
+**How I got it wrong, recorded because it is the repeat:** I read the route's comment
+(*"convert markdown note content to LaTeX and inject as scratch section"*) and its `↧` button,
+and reported a mechanism without reading the body. The comment was accurate. Stopping at it
+was the error.
+
+## The daemon: durability stays, and SQLite is the right store {#daemon-design}
+
+16:02–16:07 EDT, settling the fork on the daemon's queue:
+
+> better to use sqlite for the demon? since like / it's already on people's machines / right?
+
+> **this is a design decision**
+
+> i think i'm with you re durability
+
+> like if the only advantage of the other thing is speed like / i dont think that's where the
+> time goes
+
+**Both calls are his and both are right on the evidence.** SQLite is correct *because* it is
+embedded and already on every machine — every off-the-shelf durable-queue library is
+Postgres-backed, which for a local relay would mean a database server on each agent box. So
+the store is not a constraint we are working around; it is the decision, and it is why nothing
+off-the-shelf fits.
+
+**And durability costs nothing here**, which is what his last line says: the measured
+270–700 ms per flush was SQLite *read* plus `JSON.parse` of rows the daemon then skips.
+Durable writes were not in it. Dropping durability would have bought nothing.
+
 ## Standing, from earlier the same evening
 
 Recorded here because they were given in chat and chat scrolls:
