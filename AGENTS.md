@@ -775,10 +775,57 @@ against, living only in a working directory, is one `rm` from gone. Twice in one
 night here, load-bearing work existed nowhere but an untracked file or an
 uncommitted edit — see §"Commit when the typecheck passes".
 
+**A third route, and it is `zsh`-specific:** `zsh` does not word-split an unquoted
+variable, so `git grep <literal> main -- $PATHS` passes the whole list as a **single
+pathspec** and matches nothing. Measured 2026-08-18 — a coupling grep over seven
+paper-path files returned `0` for its subject **and** `0` for both controls; writing
+the paths out returned `9` and `18`. Spell the paths out, or use an array:
+`"${paths[@]}"`. The bad pathspec is silently accepted rather than erroring.
+
 **And run the positive control every time.** A zero from the wrong ref, a zero from
-an uncommitted literal, and a zero from a genuinely severed wire are the same zero.
-The only thing that separates them is the same query against something you know is
-there.
+an uncommitted literal, a zero from a mis-quoted pathspec, and a zero from a
+genuinely severed wire are all the same zero. The only thing that separates them is
+the same query against something you know is there.
+
+## Idempotence is what makes a messy environment survivable
+
+Skip, 2026-08-18 16:32 EDT:
+
+> i really want you guys to think about idempotence
+
+> it's like the key to having like ok behavior is a messy environment
+
+**This box is messy by nature** — agents crash, the daemon runs out of memory, the
+disk fills, sockets flap, a deploy replaces the machine mid-request. Under those
+conditions *"did this step complete?"* is frequently unanswerable. **Any design that
+needs that answer will eventually wedge.** An idempotent step does not need it: run
+it again, converge, and a crash costs a retry rather than a night.
+
+**Tonight's outage was a chain of steps that could not be re-run**, and it is the
+worked example:
+
+- **A mint that half-succeeds leaves a husk** — a process with no fleet seat. Running
+  it again does not converge on the agent you wanted; it produces a *second* husk.
+  Three were made that way in twenty minutes, by the chief who was trying to fix it.
+  Skip had already named this: `doctor yolo` *"should be fixed so it eventually
+  properly integrates agents into the fleet, like the other cli commands, like
+  idemptotently."*
+- **`retry_enqueued` is a one-shot flag** that a fingerprint comparison could never
+  set, and nothing anywhere re-derives it. State that is *computed* cannot get
+  wedged; a flag that must be *set exactly once* can, permanently and silently.
+- **Rows retried 281 times over ten hours with no error recorded.** Retrying was the
+  one thing that could not help, because the operation was not idempotent — it was
+  gated on a fact that would never become true.
+- **Paper sync is the counterexample**, and it is why he could say *"we can toss paper
+  edits — they're on the mini, they'll sync back up"* and clear a 61,000-row queue
+  without a design meeting. An idempotent subsystem lets you throw away its
+  in-flight state and lose nothing.
+
+**So, when you build a step that crosses a boundary here:** prefer state you can
+re-derive to a flag you must set; make re-running the operation converge rather than
+duplicate; and if you cannot make it idempotent, say so explicitly and say what the
+recovery is. **"It will be fine as long as nothing crashes" is not a recovery** on a
+machine where things crash.
 
 This has shipped three times. `agent-route` was announced into a server that had
 dropped its handler eleven days earlier, with the sending side green throughout.
