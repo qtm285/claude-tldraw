@@ -757,6 +757,29 @@ that literal and count the sites. **One occurrence means nobody is listening.**
 `git log -S <literal> --all` also distinguishes a dropped handler from one that
 never existed.
 
+**Two ways that check lies, and both were hit on 2026-08-18 by people running it
+correctly.**
+
+**A bare `git grep` reads the branch the checkout is sitting on, not `main`.** The
+shared checkout at `/Users/skip/work/tlda` sits on whatever branch it was last left
+on. `refusedRevision` returned **0 sites bare and 8 on `main`** — a manufactured
+"nobody is listening" on exactly the pattern this check exists to find. **Name the
+ref**: `git grep <literal> main`, or work from a worktree pinned to `main` tip.
+
+**A zero on a literal that is mid-commit is a fact about the tree, not about the
+wire.** A route that exists only as an uncommitted change in one worktree returns
+one occurrence — its own — on every ref, which reads as a severed wire. So before
+you act on a low count, establish that both ends are actually committed. **The
+inverse is the more dangerous finding anyway:** work that four people are building
+against, living only in a working directory, is one `rm` from gone. Twice in one
+night here, load-bearing work existed nowhere but an untracked file or an
+uncommitted edit — see §"Commit when the typecheck passes".
+
+**And run the positive control every time.** A zero from the wrong ref, a zero from
+an uncommitted literal, and a zero from a genuinely severed wire are the same zero.
+The only thing that separates them is the same query against something you know is
+there.
+
 This has shipped three times. `agent-route` was announced into a server that had
 dropped its handler eleven days earlier, with the sending side green throughout.
 `adopt-shadow-history` was written on both ends in `d5984269e` and never given a
