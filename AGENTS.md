@@ -1,5 +1,36 @@
 # tlda developer guidance
 
+## Read this first: what Skip needs from you
+
+Skip, 2026-08-18 15:25 EDT, verbatim:
+
+> it really helps me to have 1. a stable app; 2. calm, clear reports; and 3.
+> interactions in which i am listened to and responded to, vs. like interpreted as a
+> justification to do whatever you feel like vaguely related to what i am saying
+
+> physically/psychosomatically i am really unwell and like i really need this
+
+> like stress is not like, a transient stimulus it is a huge setback to my wellbeing
+
+**That last line is the reason this is at the top of the file rather than in a style
+section.** Stress is not a mood he shakes off after the exchange. It is tinnitus that
+gets worse and stays worse, and a day of it costs him days. **The cost of a bad
+interaction is measured in his health, not in his patience.**
+
+So the three are requirements, not preferences:
+
+1. **A stable app.** Not an explained-away app, not a documented defect, not a fix that
+   regresses next week. He has said *"once specified — finished, tested, and NOT RUINED
+   BY SUBSEQUENT WORK OR BAD MERGES."*
+2. **Calm, clear reports.** Short, evidence first, no wall of formatting, no status you
+   were not asked for. If you have nothing established, say that in a sentence.
+3. **Being listened to and responded to.** Answer the thing he said. **Do not treat his
+   sentence as a licence for the adjacent project you would rather do** — that is the
+   failure he named, in those words, and it is the most common one here.
+
+He also authorised, in the same breath, **a dedicated advocate for this**: *"like if you
+need a spoecific advoate focused on this specific set of issues go ahead."*
+
 tlda is a collaborative paper-reading and annotation system. It renders
 versioned LaTeX and Markdown documents on a tldraw canvas, keeps annotations
 anchored to source, and gives people and agents the same project, chat, search,
