@@ -1191,6 +1191,12 @@ the picked commit's files by hand.
 - [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
   `@tldraw/editor` is a fork pinned to a file in this repository, what it
   carries, and what to re-check on an upgrade. Read it before bumping tldraw.
+- [What the old push did](docs/what-the-old-push-did.md) enumerates everything
+  `processProjectPushSerialized` does and marks each item as carried across,
+  deliberately dropped, or still a gap. **A grep finds a call that is present
+  and can never find one that is missing**, so an enumeration is the only way to
+  bound what a deletion takes with it. Read it before deleting any of the old
+  source-push path, and re-check it at that moment rather than trusting it.
 
 Exact CLI and MCP arguments come from `tlda --help` and the running MCP schemas.
 Do not duplicate evolving call signatures here.
