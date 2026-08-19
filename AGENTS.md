@@ -1,5 +1,36 @@
 # tlda developer guidance
 
+## Read this first: what Skip needs from you
+
+Skip, 2026-08-18 15:25 EDT, verbatim:
+
+> it really helps me to have 1. a stable app; 2. calm, clear reports; and 3.
+> interactions in which i am listened to and responded to, vs. like interpreted as a
+> justification to do whatever you feel like vaguely related to what i am saying
+
+> physically/psychosomatically i am really unwell and like i really need this
+
+> like stress is not like, a transient stimulus it is a huge setback to my wellbeing
+
+**That last line is the reason this is at the top of the file rather than in a style
+section.** Stress is not a mood he shakes off after the exchange. It is tinnitus that
+gets worse and stays worse, and a day of it costs him days. **The cost of a bad
+interaction is measured in his health, not in his patience.**
+
+So the three are requirements, not preferences:
+
+1. **A stable app.** Not an explained-away app, not a documented defect, not a fix that
+   regresses next week. He has said *"once specified — finished, tested, and NOT RUINED
+   BY SUBSEQUENT WORK OR BAD MERGES."*
+2. **Calm, clear reports.** Short, evidence first, no wall of formatting, no status you
+   were not asked for. If you have nothing established, say that in a sentence.
+3. **Being listened to and responded to.** Answer the thing he said. **Do not treat his
+   sentence as a licence for the adjacent project you would rather do** — that is the
+   failure he named, in those words, and it is the most common one here.
+
+He also authorised, in the same breath, **a dedicated advocate for this**: *"like if you
+need a spoecific advoate focused on this specific set of issues go ahead."*
+
 tlda is a collaborative paper-reading and annotation system. It renders
 versioned LaTeX and Markdown documents on a tldraw canvas, keeps annotations
 anchored to source, and gives people and agents the same project, chat, search,
@@ -726,6 +757,101 @@ that literal and count the sites. **One occurrence means nobody is listening.**
 `git log -S <literal> --all` also distinguishes a dropped handler from one that
 never existed.
 
+**Two ways that check lies, and both were hit on 2026-08-18 by people running it
+correctly.**
+
+**A bare `git grep` reads the branch the checkout is sitting on, not `main`.** The
+shared checkout at `/Users/skip/work/tlda` sits on whatever branch it was last left
+on. `refusedRevision` returned **0 sites bare and 8 on `main`** — a manufactured
+"nobody is listening" on exactly the pattern this check exists to find. **Name the
+ref**: `git grep <literal> main`, or work from a worktree pinned to `main` tip.
+
+**A zero on a literal that is mid-commit is a fact about the tree, not about the
+wire.** A route that exists only as an uncommitted change in one worktree returns
+one occurrence — its own — on every ref, which reads as a severed wire. So before
+you act on a low count, establish that both ends are actually committed. **The
+inverse is the more dangerous finding anyway:** work that four people are building
+against, living only in a working directory, is one `rm` from gone. Twice in one
+night here, load-bearing work existed nowhere but an untracked file or an
+uncommitted edit — see §"Commit when the typecheck passes".
+
+**A third route, and it is `zsh`-specific:** `zsh` does not word-split an unquoted
+variable, so `git grep <literal> main -- $PATHS` passes the whole list as a **single
+pathspec** and matches nothing. Measured 2026-08-18 — a coupling grep over seven
+paper-path files returned `0` for its subject **and** `0` for both controls; writing
+the paths out returned `9` and `18`. Spell the paths out, or use an array:
+`"${paths[@]}"`. The bad pathspec is silently accepted rather than erroring.
+
+**And run the positive control every time.** A zero from the wrong ref, a zero from
+an uncommitted literal, a zero from a mis-quoted pathspec, and a zero from a
+genuinely severed wire are all the same zero. The only thing that separates them is
+the same query against something you know is there.
+
+## Idempotence is what makes a messy environment survivable
+
+Skip, 2026-08-18 16:32 EDT:
+
+> i really want you guys to think about idempotence
+
+> it's like the key to having like ok behavior is a messy environment
+
+**This box is messy by nature** — agents crash, the daemon runs out of memory, the
+disk fills, sockets flap, a deploy replaces the machine mid-request. Under those
+conditions *"did this step complete?"* is frequently unanswerable. **Any design that
+needs that answer will eventually wedge.** An idempotent step does not need it: run
+it again, converge, and a crash costs a retry rather than a night.
+
+**Tonight's outage was a chain of steps that could not be re-run**, and it is the
+worked example:
+
+- **A mint that half-succeeds leaves a husk** — a process with no fleet seat. Running
+  it again does not converge on the agent you wanted; it produces a *second* husk.
+  Three were made that way in twenty minutes, by the chief who was trying to fix it.
+  Skip had already named this: `doctor yolo` *"should be fixed so it eventually
+  properly integrates agents into the fleet, like the other cli commands, like
+  idemptotently."*
+
+  **That is done, and what it took is the part worth keeping.** Skip, 2026-08-19
+  ~00:00 EDT: *"Doctor YOLO should not be deleted. It should be made fucking like,
+  item potent and fucking try to finish, like, the rest of the shit."* Asked twice
+  for a name already running here, it now launches once and re-records the facts —
+  keyed on a **live tmux session**, not on the presence of a record, because a
+  recorded mint whose process is gone is an agent to start again.
+
+  **Neither of the two things it "skipped" was missing. Both were written where the
+  reader does not look.** It always recorded a mint — joined, with a fleet id — but
+  put the environment in `metadata` and never in the `env_name` column that
+  `getByFriendlyName` filters on, so `tlda agent wake <name>` answered *"no local
+  mint recorded"* about a row sitting in the table. And it resolved a machine id and
+  an environment and then handed the *caller's* params to the environment builder,
+  which sets `TLDA_MACHINE_ID`/`TLDA_ENV` only when the caller supplied them — so
+  the launched process carried no `FLEET_DAEMON_KEY`, and the server writes an
+  agent's route from the daemon key its **login** carries. What hid that for weeks
+  is that the builder copies `process.env`: a break-glass agent launched from
+  another agent's shell inherited that agent's daemon key by accident and looked
+  routable.
+
+  **So when a launch path "records no mint and publishes no route", check whether it
+  records them somewhere unreadable before concluding it does not record them.** A
+  wrong answer to a lookup and a right answer inherited from the wrong process both
+  read exactly like an absent feature.
+- **`retry_enqueued` is a one-shot flag** that a fingerprint comparison could never
+  set, and nothing anywhere re-derives it. State that is *computed* cannot get
+  wedged; a flag that must be *set exactly once* can, permanently and silently.
+- **Rows retried 281 times over ten hours with no error recorded.** Retrying was the
+  one thing that could not help, because the operation was not idempotent — it was
+  gated on a fact that would never become true.
+- **Paper sync is the counterexample**, and it is why he could say *"we can toss paper
+  edits — they're on the mini, they'll sync back up"* and clear a 61,000-row queue
+  without a design meeting. An idempotent subsystem lets you throw away its
+  in-flight state and lose nothing.
+
+**So, when you build a step that crosses a boundary here:** prefer state you can
+re-derive to a flag you must set; make re-running the operation converge rather than
+duplicate; and if you cannot make it idempotent, say so explicitly and say what the
+recovery is. **"It will be fine as long as nothing crashes" is not a recovery** on a
+machine where things crash.
+
 This has shipped three times. `agent-route` was announced into a server that had
 dropped its handler eleven days earlier, with the sending side green throughout.
 `adopt-shadow-history` was written on both ends in `d5984269e` and never given a
@@ -1071,6 +1197,24 @@ The test: authorization asks *who is calling*. These ask *how expensive is this*
 
 - Temporary plans and reports belong under `scratch/`, not in the repository
   root or durable documentation.
+
+  **But `scratch/` is gitignored (`.gitignore:47`), so "I wrote it down" and "it
+  will survive" are different facts, and the difference is invisible at the
+  moment of writing.** There are over 1,100 files in that directory.
+
+  **The distinction that resolves it: `scratch/` is right for a *report* — which
+  records something already established — and wrong for a *resumption point*,
+  which is what the next session works *from*.** A report can be regenerated by
+  redoing the work. A resumption point is the work.
+
+  So **force-add a resumption point**, and say why in the commit message —
+  otherwise the next person tidying sees a tracked file under `scratch/`,
+  concludes it shouldn't be, and removes it. On 2026-08-18 this rule cost five
+  separate pieces of load-bearing work: a handoff whose only copy was untracked,
+  an uncommitted carrier four agents were building against, two layout fixes
+  found by someone other than their author, and a pair of deletion-resumption
+  artifacts parked in `scratch/` by the same agent who had just told someone else
+  to write theirs somewhere durable.
 - Feature work belongs in its assigned worktree. Do not move or stash another
   contributor's changes to make a checkout clean.
 - **Every working copy lives in `~/worktrees/`.** One place, for worktrees and
@@ -1176,6 +1320,11 @@ the picked commit's files by hand.
   tables.
 - [Hosting tlda](docs/hosting.md) covers serving and network boundaries.
 - [Fly deployment](docs/live-deploy.md) is the live release runbook.
+- [Reclaiming space in fleet.db](docs/fleet-db-vacuum-runbook.md) is the
+  maintenance-window procedure for the fleet store. `auto_vacuum` is `NONE`, so
+  no amount of pruning shrinks that file and only this does. Read it before
+  proposing a `VACUUM`: the plain form holds an exclusive lock across a ~10 GB
+  rewrite and strands every concurrent write.
 - [Permissions implementation contract](docs/permissions-implementation-contract.md)
   defines internal grant resolution and persistence.
 - [Fleet chat artifact contract](docs/fleet-chat-artifacts.md) defines shared
