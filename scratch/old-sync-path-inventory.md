@@ -450,3 +450,32 @@ Not strip damage. These were already failing where nobody was looking:
   dead at import on the branch, so the repoint did not cause it; the failures are `main`'s.
 - **`test/linked-remote-divergence.test.mjs`** cannot reach its assertions on `main` at all
   (fails in setup), so `main`'s behaviour on those promises is currently unestablished.
+
+## 4. `shared/tex-deps.mjs` — a comment-only husk left by a revert
+
+```
+non-comment, non-blank lines:   0
+exports:                        0
+files importing it:             0   (only itself)
+
+e9c3ba890  Revert "Make LaTeX membership the closure of the document's roots"
+22fb6182b  Make LaTeX membership the closure of the document's roots
+```
+
+The LaTeX closure was built and reverted, and **the revert left 152 lines of prose behind.**
+The file reads exactly like a live module — it opens *"the SHARED LaTeX dependency
+detector"* — so it is a natural place to send someone, and on 2026-08-19 it sent the chief
+and then me. Positive control on that zero: its own header names
+`shared/markdown-deps.mjs` as its counterpart, and that one has 4 exports and 14 importers.
+
+**Not deleted, deliberately.** It is the written argument for why LaTeX membership should be
+a closure, and **LaTeX still does not have one** — membership there is a directory walk plus
+an extension test, which is the state the husk's header complains about. Skip's rule that a
+file belongs to a project because something refers to it is implemented for Markdown and not
+for LaTeX, which is most of his papers. That is a live design gap, recorded here rather than
+silently tidied away.
+
+Same family as entries 1–3: an instruction pointing at something that is not there. This one
+is the inverse of entry 1 — there the code moved and the comment stayed as a *warning*; here
+the code went and the comment stayed as a *description*, which is worse, because a
+description of a thing that does not exist reads as documentation of a thing that does.
