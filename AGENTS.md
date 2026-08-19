@@ -1188,6 +1188,11 @@ the picked commit's files by hand.
   do, with what they actually mean. A rename in a live path is a real change; a
   written-down lie costs nothing and stops the next person inheriting it. Add to
   it when you hit one, and delete the entry in the commit that fixes it.
+- [The instrument, or the code](docs/the-instrument-or-the-code.md) is the same
+  disease one level up: a measurement that lies about what the system did, in a
+  form that looks like evidence. Five shapes and the check for each, from nine
+  in one night that each reported a defect in a working path. Read it before
+  reporting an absence, a hang, or a failure.
 - [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
   `@tldraw/editor` is a fork pinned to a file in this repository, what it
   carries, and what to re-check on an upgrade. Read it before bumping tldraw.
