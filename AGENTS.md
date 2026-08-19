@@ -810,6 +810,31 @@ worked example:
   Skip had already named this: `doctor yolo` *"should be fixed so it eventually
   properly integrates agents into the fleet, like the other cli commands, like
   idemptotently."*
+
+  **That is done, and what it took is the part worth keeping.** Skip, 2026-08-19
+  ~00:00 EDT: *"Doctor YOLO should not be deleted. It should be made fucking like,
+  item potent and fucking try to finish, like, the rest of the shit."* Asked twice
+  for a name already running here, it now launches once and re-records the facts —
+  keyed on a **live tmux session**, not on the presence of a record, because a
+  recorded mint whose process is gone is an agent to start again.
+
+  **Neither of the two things it "skipped" was missing. Both were written where the
+  reader does not look.** It always recorded a mint — joined, with a fleet id — but
+  put the environment in `metadata` and never in the `env_name` column that
+  `getByFriendlyName` filters on, so `tlda agent wake <name>` answered *"no local
+  mint recorded"* about a row sitting in the table. And it resolved a machine id and
+  an environment and then handed the *caller's* params to the environment builder,
+  which sets `TLDA_MACHINE_ID`/`TLDA_ENV` only when the caller supplied them — so
+  the launched process carried no `FLEET_DAEMON_KEY`, and the server writes an
+  agent's route from the daemon key its **login** carries. What hid that for weeks
+  is that the builder copies `process.env`: a break-glass agent launched from
+  another agent's shell inherited that agent's daemon key by accident and looked
+  routable.
+
+  **So when a launch path "records no mint and publishes no route", check whether it
+  records them somewhere unreadable before concluding it does not record them.** A
+  wrong answer to a lookup and a right answer inherited from the wrong process both
+  read exactly like an absent feature.
 - **`retry_enqueued` is a one-shot flag** that a fingerprint comparison could never
   set, and nothing anywhere re-derives it. State that is *computed* cannot get
   wedged; a flag that must be *set exactly once* can, permanently and silently.
