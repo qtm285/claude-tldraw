@@ -1337,9 +1337,20 @@ the picked commit's files by hand.
   do, with what they actually mean. A rename in a live path is a real change; a
   written-down lie costs nothing and stops the next person inheriting it. Add to
   it when you hit one, and delete the entry in the commit that fixes it.
+- [The instrument, or the code](docs/the-instrument-or-the-code.md) is the same
+  disease one level up: a measurement that lies about what the system did, in a
+  form that looks like evidence. Five shapes and the check for each, from nine
+  in one night that each reported a defect in a working path. Read it before
+  reporting an absence, a hang, or a failure.
 - [The vendored tldraw editor](docs/vendored-tldraw-editor.md) records that
   `@tldraw/editor` is a fork pinned to a file in this repository, what it
   carries, and what to re-check on an upgrade. Read it before bumping tldraw.
+- [What the old push did](docs/what-the-old-push-did.md) enumerates everything
+  `processProjectPushSerialized` does and marks each item as carried across,
+  deliberately dropped, or still a gap. **A grep finds a call that is present
+  and can never find one that is missing**, so an enumeration is the only way to
+  bound what a deletion takes with it. Read it before deleting any of the old
+  source-push path, and re-check it at that moment rather than trusting it.
 
 Exact CLI and MCP arguments come from `tlda --help` and the running MCP schemas.
 Do not duplicate evolving call signatures here.
