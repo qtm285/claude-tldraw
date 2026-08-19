@@ -1,5 +1,34 @@
 # Deletion commit — prepared, NOT landed {#draft}
 
+> # ⚠ OBSOLETED — READ THE DESIGN FIRST
+>
+> **Obsoleted by the design at `7050929a1`, §2.4. The gate below predates the
+> removal of `sourceManifest`. Read the design before you read anything here.**
+>
+> The design deletes `sourceManifest` outright — the tree *is* the manifest, so
+> there is no second description of membership that can disagree with the bytes.
+> **That takes `carryForward`, `GET /source-entries`, and all 18 caller
+> migrations with it**, so **gate items 1, 5, 6 and 8 below describe checks
+> against machinery the design removes.** They are not a to-do list.
+>
+> **This notice exists because the header underneath it says to trust this file.**
+> A stale document with no header is a document someone evaluates; a stale one
+> that opens with *"this is where the next session writes from"* is a false
+> instruction, and the header is what converts it. That shape cost this project
+> real time the night this was written.
+>
+> **What is still good here:** the ordering argument (callers → route → daemons
+> updated *and restarted* → the WS `source-change` handler last, because it
+> receives what the daemon cutover stopped sending), and the reasoning about
+> what a gate is for. **`old-sync-deletion-sweep.sh` beside this file is
+> unaffected** — it is URL-anchored and helper-agnostic, and its two lessons are
+> design-independent: a control absent from the ref being swept proves nothing,
+> and a grep finds a call that is present, never one that is missing.
+>
+> **Do not build from `fix-bot-launcher-name-race`** — measured 180 commits
+> behind `main`, and it does not contain `server/lib/source-git-store.mjs` at
+> all. Build from `main`.
+
 > **What this file is: a resumption point, not a report.** It is where the next
 > session writes the deletion commit from. Its companion
 > `old-sync-deletion-sweep.sh` is the instrument that fills it.
